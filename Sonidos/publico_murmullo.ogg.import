@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/publico_murmullo.ogg-53fc339fa2ba7e432879a4c8bfd65ac6.oggstr"
+
+[deps]
+
+source_file="res://Sonidos/publico_murmullo.ogg"
+dest_files=[ "res://.import/publico_murmullo.ogg-53fc339fa2ba7e432879a4c8bfd65ac6.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

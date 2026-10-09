@@ -1,4 +1,5 @@
 extends Node
+# VERSION: orden de llegada real del 2do en adelante (oct 2026)
 
 # ============================================================
 # GESTOR DE NIVEL, PELOTON, RECORRIDO Y VUELTAS
@@ -46,8 +47,8 @@ export var piso_relajacion = 0.25
 # aflojando solos, como en una carrera real. 0.35 = pierde ~35%
 # de la velocidad por segundo. Baja el numero para que aflojen
 # mas lento, subelo para que aflojen mas rapido.
-export var desaceleracion_final = 0.35
-export var velocidad_minima_final = 3.0
+export var desaceleracion_final = 0.08
+export var velocidad_minima_final = 15.0
 
 # --- Photo Finish ---
 # Si la diferencia de recorrido entre el 1° y el 2° lugar, en el
@@ -72,6 +73,9 @@ export var salto_maximo_por_cuadro = 20.0
 export var mostrar_diagnostico = true
 
 signal photo_finish_detectado(caballo_ganador, diferencia)
+# Avisa cada vez que otro caballo cruza la raya despues del ganador,
+# para que los carteles refresquen la lista de puestos.
+signal orden_llegada_actualizado
 
 var _corredores = []
 var _tiempo_carrera = 0.0
@@ -99,8 +103,21 @@ var _ganador = null
 var _photo_finish_activo = false
 var _diferencia_photo_finish = 0.0
 var _orden_llegada_congelado = []
+var _llegados_en_orden = []    # los que ya cruzaron, en el orden real en que tocaron la raya
 var _avance_ultimo = {}
 var _fraccion_cruce = {}
+
+# JUEZ POR LA NARIZ - el punto de cada enrutador (donde el juego lleva la
+# cuenta del caballo) NO es la punta de la nariz: queda unos metros mas
+# atras, mas o menos en el medio del caballo. El juez decidia cuando ese
+# punto tocaba la raya, y para entonces un caballo mas rapido que venia
+# a una nariz de distancia ya lo habia alcanzado o pasado. Por eso
+# ganaban los que venian con mas velocidad aunque no les correspondiera.
+# Ahora se mide, en cada caballo, cuanto va la nariz por delante de ese
+# punto, y el juez decide cuando la NARIZ toca la raya, como en la vida
+# real. Poner en false para volver a como estaba.
+var juzgar_por_la_nariz = true
+var _adelanto_nariz = {}
 var _recorrido_congelado = {}
 
 
@@ -116,6 +133,12 @@ func _process(delta):
 
 func reiniciar_carrera():
 	_tiempo_carrera = 0.0
+	_arrancada.clear()
+	_objetivo_salida.clear()
+	_entrada_recta_final.clear()
+	_idea_baranda.clear()
+	_apertura.clear()
+	_ultima_vez_en_curva.clear()
 	_corredores.clear()
 	_recorrido.clear()
 	_offset_anterior_recorrido.clear()
@@ -129,9 +152,13 @@ func reiniciar_carrera():
 	_photo_finish_activo = false
 	_diferencia_photo_finish = 0.0
 	_orden_llegada_congelado.clear()
+	_llegados_en_orden.clear()
 	_recorrido_congelado.clear()
 	_avance_ultimo.clear()
 	_fraccion_cruce.clear()
+	_adelanto_nariz.clear()
+	_grupo_de.clear()
+	_grupos_sorteados.clear()
 
 
 # Sube un nivel (de 10) si el jugador gano (posicion 1), y se
@@ -271,6 +298,36 @@ func obtener_recorrido(nodo) -> float:
 	return _recorrido.get(nodo, 0.0)
 
 
+# ------------------------------------------------------------
+# ARRANCADA DE LOS RIVALES
+# Al abrirse el aparato, cada rival sale con una parte de su velocidad
+# y va acelerando hasta su ritmo de carrera, cada uno en sus propios
+# metros (al azar en cada carrera). Asi unos pegan el salto rapido y
+# otros tardan en agarrar ritmo. Cada rival multiplica su avance por
+# este numero (1 = ya agarro su ritmo).
+# ------------------------------------------------------------
+export var usar_arrancada = false
+export var factor_salida_min = 0.35       # con que parte de su velocidad sale (0.35 = 35%)
+export var factor_salida_max = 0.55
+export var metros_arrancada_min = 40.0    # en cuantos metros llega a su ritmo
+export var metros_arrancada_max = 120.0
+export var arrancada_en_800 = false       # la de 800 m no se toca
+var _arrancada = {}
+
+func obtener_factor_arranque(corredor) -> float:
+	if not usar_arrancada:
+		return 1.0
+	if modo_recta and not arrancada_en_800:
+		return 1.0
+	if not _arrancada.has(corredor):
+		_arrancada[corredor] = [rand_range(factor_salida_min, factor_salida_max), rand_range(metros_arrancada_min, metros_arrancada_max)]
+	var datos = _arrancada[corredor]
+	var r = obtener_recorrido(corredor)
+	if r >= datos[1]:
+		return 1.0
+	return lerp(datos[0], 1.0, smoothstep(0.0, datos[1], r))
+
+
 func obtener_distancia_restante(nodo) -> float:
 	if not modo_recta:
 		return -1.0
@@ -299,7 +356,14 @@ func obtener_distancia_hasta_meta(corredor) -> float:
 	if vueltas_del_corredor < vueltas_totales - 1:
 		return -1.0
 
-	return fposmod(_meta_ovalo.offset - corredor.offset, _longitud_pista)
+	# CORREGIDO (bug de carreras de 2 o mas vueltas) - la vuelta se
+	# cuenta cuando la NARIZ toca la raya, pero esta distancia se medía
+	# desde el punto del enrutador (unos metros mas atras). Entonces, al
+	# terminar la 1ra vuelta, el puntero ya contaba como "ultima vuelta"
+	# y le faltaban 2 o 3 metros: se prendia la camara de llegada, el
+	# flash y el audio final en plena carrera. Ahora se mide igual que
+	# el juez: hasta donde la nariz toca la raya.
+	return fposmod(_meta_ovalo.offset - _nariz(corredor) - corredor.offset, _longitud_pista)
 
 
 # Distancia hasta la meta del caballo que va MAS ADELANTE de todos
@@ -365,7 +429,35 @@ func obtener_offset_promedio() -> float:
 	if lista.size() % 2 == 1:
 		return lista[medio]
 	return (lista[medio - 1] + lista[medio]) * 0.5
+# --- GRUPOS DEL PELOTON (nuevo) ---
+# En cada carrera se sortea en que grupo corre cada rival: 3 adelante
+# y despues grupos de 2, cada uno mas atras. Asi no van apilados y
+# queda espacio para maniobrar. El jugador no entra en el sorteo.
+# Distancia entre un grupo y el siguiente (20 = unos dos cuerpos).
+export var separacion_entre_grupos = 20.0
+# Cuantos caballos hay en cada grupo, de adelante hacia atras.
+export var tamanos_de_grupo = [3, 2, 2, 2]
 
+var _grupo_de = {}
+var _grupos_sorteados = []
+
+func obtener_offset_objetivo(corredor) -> float:
+	var promedio = obtener_offset_promedio()
+	if corredor.name == "Enrutador_Caballo1":
+		return promedio
+	if not _grupo_de.has(corredor):
+		if _grupos_sorteados.empty():
+			_sortear_grupos()
+		_grupo_de[corredor] = _grupos_sorteados.pop_back()
+	var centro = (tamanos_de_grupo.size() - 1) * 0.5
+	return promedio + (centro - _grupo_de[corredor]) * separacion_entre_grupos
+
+func _sortear_grupos():
+	randomize()
+	for i in range(tamanos_de_grupo.size()):
+		for j in range(tamanos_de_grupo[i]):
+			_grupos_sorteados.append(i)
+	_grupos_sorteados.shuffle()
 
 # NUEVO - que fraccion de la carrera ya se corrio, medida por
 # DISTANCIA (el que va mas adelante de todos), no por tiempo. Se usa
@@ -436,7 +528,7 @@ func ha_terminado(corredor) -> bool:
 		var objetivo = _objetivo_recta.get(corredor, 0.0)
 		if objetivo <= 0.0:
 			return false
-		return obtener_recorrido(corredor) >= objetivo
+		return obtener_recorrido(corredor) + _nariz(corredor) >= objetivo
 	return _vueltas_completadas.get(corredor, 0) >= vueltas_totales
 
 
@@ -473,7 +565,7 @@ func _revisar_cruces_meta():
 			continue
 		if ha_terminado(corredor):
 			continue
-		if _cruzo_meta(corredor, meta_offset):
+		if _cruzo_meta(corredor, meta_offset - _nariz(corredor)):
 			_vueltas_completadas[corredor] = _vueltas_completadas.get(corredor, 0) + 1
 			# DIAGNOSTICO NUEVO - antes esto no se imprimia nunca a mitad
 			# de carrera, solo al terminar toda la carrera. Sirve para ver
@@ -516,6 +608,8 @@ func _cruzo_meta(corredor, meta_offset) -> bool:
 # Photo Finish
 # ------------------------------------------------------------
 func _revisar_photo_finish():
+	if _ganador != null:
+		_actualizar_orden_llegada()
 	if _ganador != null:
 		return
 	if _corredores.empty():
@@ -606,12 +700,12 @@ func _fraccion_desde_que_cruzo(corredor) -> float:
 		return 0.0
 	var sobrante = 0.0
 	if modo_recta:
-		sobrante = obtener_recorrido(corredor) - _objetivo_recta.get(corredor, 0.0)
+		sobrante = obtener_recorrido(corredor) + _nariz(corredor) - _objetivo_recta.get(corredor, 0.0)
 	else:
 		var meta_offset = _obtener_offset_meta_activa()
 		if meta_offset < 0.0 or _longitud_pista <= 0.0:
 			return 0.0
-		sobrante = fposmod(corredor.offset - meta_offset, _longitud_pista)
+		sobrante = fposmod(corredor.offset + _nariz(corredor) - meta_offset, _longitud_pista)
 		if sobrante > _longitud_pista * 0.5:
 			sobrante -= _longitud_pista
 	return clamp(sobrante / avance, 0.0, 1.0)
@@ -619,6 +713,63 @@ func _fraccion_desde_que_cruzo(corredor) -> float:
 
 func obtener_ganador():
 	return _ganador
+
+
+# Cuanto va la nariz por delante del punto del enrutador, en unidades de
+# pista. Se mide una sola vez por caballo (el dibujo no cambia de largo).
+func _nariz(corredor) -> float:
+	if not juzgar_por_la_nariz or not is_instance_valid(corredor):
+		return 0.0
+	if _adelanto_nariz.has(corredor):
+		return _adelanto_nariz[corredor]
+	# Se espera un segundo para que el repartidor ya haya puesto los
+	# caballos definitivos.
+	if _tiempo_carrera < 1.0:
+		return 0.0
+	var valor = _medir_nariz(corredor)
+	_adelanto_nariz[corredor] = valor
+	if mostrar_diagnostico:
+		print("[BDG] nariz de ", corredor.name, ": va ", stepify(valor, 0.01), " por delante de su punto")
+	return valor
+
+
+func _medir_nariz(corredor) -> float:
+	var modelo = null
+	for h in corredor.get_children():
+		if h is Spatial and h.name.begins_with("Caballo") and h.is_visible_in_tree():
+			modelo = h
+			break
+	if modelo == null:
+		return 0.0
+	var adelante = -corredor.global_transform.basis.z
+	adelante.y = 0.0
+	if adelante.length() < 0.001:
+		return 0.0
+	adelante = adelante.normalized()
+	var origen = corredor.global_transform.origin
+	var mejor = -1000000.0
+	for mi in _mallas_del_caballo(modelo):
+		var caja = mi.get_transformed_aabb()
+		for i in range(8):
+			var d = (caja.get_endpoint(i) - origen).dot(adelante)
+			if d > mejor:
+				mejor = d
+	if mejor < -999999.0:
+		return 0.0
+	return clamp(mejor, -50.0, 50.0)
+
+
+# Mallas del cuerpo del caballo, sin entrar a silla, jinete ni brida
+# (van colgadas de BoneAttachment).
+func _mallas_del_caballo(n) -> Array:
+	var r = []
+	for c in n.get_children():
+		if c is BoneAttachment:
+			continue
+		if c is MeshInstance and c.mesh != null and c.is_visible_in_tree():
+			r.append(c)
+		r += _mallas_del_caballo(c)
+	return r
 
 
 func es_photo_finish() -> bool:
@@ -696,7 +847,7 @@ export var distancia_cuerpos_seguridad = 10.0
 # mas grande sea, mas lejos empuja el efecto dominó a cada uno hacia
 # afuera de la baranda cuando se amontonan al arrancar. Bajarlo
 # achica ese empuje acumulado.
-export var distancia_minima_lateral = 6.0
+export var distancia_minima_lateral = 8.0
 
 # Ya no se usa para decidir bloqueos (eso ahora lo hace
 # distancia_cuerpos_seguridad, medido en recorrido real), pero se
@@ -888,9 +1039,9 @@ func _obtener_objetivo_lateral(corredor) -> float:
 		var diferencia = obtener_recorrido(otro) - recorrido_propio
 		if diferencia > distancia_cuerpos_seguridad:
 			continue
-		if diferencia < -margen_empate_recorrido:
+		if diferencia < -distancia_frenado_longitudinal:
 			continue
-		if diferencia <= margen_empate_recorrido:
+		if abs(diferencia) <= margen_empate_recorrido:
 			# Van parejos, lado a lado. Para que los dos coincidan en
 			# quien le hace lugar a quien (y no se crucen), se usa un
 			# desempate fijo que no cambia durante la carrera.
@@ -949,7 +1100,121 @@ func _obtener_minimo_lateral_estable(corredor) -> float:
 
 func obtener_h_offset_hacia_baranda(corredor) -> float:
 	_limpiar_corredores()
-	return _obtener_minimo_lateral_estable(corredor)
+	var minimo = _obtener_minimo_lateral_estable(corredor)
+	# NUEVO - en la recta final ya no buscan la baranda: se quedan en
+	# su carril y algunos se abren un poco, como en la vida real.
+	var en_final = _carril_recta_final(corredor, minimo)
+	if en_final >= 0.0:
+		return en_final
+	return _con_rapidez_maxima(corredor, _suavizar_salida(corredor, _decidir_baranda(corredor, minimo)))
+
+
+# NUEVO - Rapidez maxima hacia los lados (carriles por segundo). Antes,
+# mientras mas lejos de la baranda estaba un caballo, mas rapido se
+# cruzaba hacia ella, y salian del aparato en diagonal. Mas bajo = mas
+# derechos. 0 = apagado (como antes).
+export var rapidez_max_lateral = 6.0
+
+func _con_rapidez_maxima(corredor, objetivo) -> float:
+	if rapidez_max_lateral <= 0.0:
+		return objetivo
+	var k = 2.0
+	if "velocidad_ajuste_lateral" in corredor:
+		k = max(corredor.velocidad_ajuste_lateral, 0.01)
+	var margen = rapidez_max_lateral / k
+	return clamp(objetivo, corredor.h_offset - margen, corredor.h_offset + margen)
+
+
+# ------------------------------------------------------------
+# AUTONOMIA: CADA RIVAL DECIDE SI BUSCA LA BARANDA
+# Cada rival decide al azar si es de los que buscan la baranda o de los
+# que se quedan en su carril, y cada uno se mueve con su propia calma.
+# Cada cierto rato algunos cambian de idea. Nadie se tira de golpe.
+# ------------------------------------------------------------
+export var autonomia_baranda = false
+export var probabilidad_buscar_baranda = 0.5   # 0.5 = la mitad la busca
+export var segundos_cambiar_idea_min = 15.0
+export var segundos_cambiar_idea_max = 25.0
+export var calma_min = 0.5                     # bajo = se mueve tranquilo
+export var calma_max = 1.5
+# Por cada rival: [busca la baranda, su carril, hasta cuando, calma, lugar actual]
+var _idea_baranda = {}
+
+func _decidir_baranda(corredor, minimo) -> float:
+	if not autonomia_baranda:
+		return minimo
+	var idea = _idea_baranda.get(corredor, null)
+	if idea == null or _tiempo_carrera >= idea[2]:
+		var calma = rand_range(calma_min, calma_max)
+		var lugar = corredor.h_offset
+		if idea != null:
+			calma = idea[3]
+			lugar = idea[4]
+		idea = [randf() < probabilidad_buscar_baranda, corredor.h_offset, _tiempo_carrera + rand_range(segundos_cambiar_idea_min, segundos_cambiar_idea_max), calma, lugar]
+		_idea_baranda[corredor] = idea
+	var destino = minimo
+	if not idea[0]:
+		destino = max(minimo, idea[1])
+	idea[4] = lerp(idea[4], destino, clamp(idea[3] * get_process_delta_time(), 0.0, 1.0))
+	return max(minimo, idea[4])
+
+
+func _busca_baranda(corredor) -> bool:
+	if not autonomia_baranda or not _idea_baranda.has(corredor):
+		return true
+	return _idea_baranda[corredor][0]
+
+
+# ------------------------------------------------------------
+# RECTA FINAL
+# Los caballos se pegan a la baranda para ahorrar camino en la curva.
+# Saliendo de la ultima curva ya no tiene sentido: cada rival se queda
+# en el carril donde salio de la curva, y algunos (al azar) se abren
+# unos metros. Solo se corren hacia afuera si alguien los tapa.
+# ------------------------------------------------------------
+export var no_buscar_baranda_al_final = true
+export var metros_recta_final = 400.0    # a cuantos metros de la meta empieza
+export var abrirse_final_max = 6.0       # cuanto se puede abrir cada uno, como maximo
+var _entrada_recta_final = {}
+
+func _carril_recta_final(corredor, minimo) -> float:
+	if not no_buscar_baranda_al_final or modo_recta:
+		return -1.0
+	var falta = obtener_distancia_hasta_meta(corredor)
+	if falta < 0.0 or falta > metros_recta_final:
+		return -1.0
+	if not _entrada_recta_final.has(corredor):
+		_entrada_recta_final[corredor] = corredor.h_offset + rand_range(0.0, abrirse_final_max)
+	var destino = min(_entrada_recta_final[corredor], h_offset_maximo_curva)
+	return max(minimo, destino)
+
+
+# ------------------------------------------------------------
+# SALIDA SUAVE
+# Al largar, con todos juntos, el lugar al que cada rival quiere ir
+# cambia a cada rato y se veian brincando de un lado a otro. En los
+# primeros metros ese lugar se mueve despacio, y despues vuelve poco a
+# poco a lo normal.
+# ------------------------------------------------------------
+export var suavizar_salida = true
+export var metros_salida_suave = 400.0   # en cuantos metros vuelve a lo normal
+export var suavidad_salida = 0.15         # al largar: mas bajo = mas suave
+export var suavidad_final_salida = 3.0   # al terminar el tramo: rapidez normal
+var _objetivo_salida = {}
+
+func _suavizar_salida(corredor, objetivo) -> float:
+	if not suavizar_salida or metros_salida_suave <= 0.0:
+		return objetivo
+	var r = obtener_recorrido(corredor)
+	if r >= metros_salida_suave:
+		_objetivo_salida.erase(corredor)
+		return objetivo
+	var antes = _objetivo_salida.get(corredor, corredor.h_offset)
+	# Siempre suavizado: arranca muy lento y se va soltando poco a poco.
+	var rapidez = lerp(suavidad_salida, suavidad_final_salida, r / metros_salida_suave)
+	var suave = lerp(antes, objetivo, clamp(rapidez * get_process_delta_time(), 0.0, 1.0))
+	_objetivo_salida[corredor] = suave
+	return suave
 
 
 # NUEVO (causa real de "se quedan pegados a la baranda exterior") -
@@ -984,9 +1249,49 @@ func separar_si_esta_pegado(corredor, h_offset_actual, velocidad_ajuste, delta) 
 	var minimo = _obtener_minimo_lateral_estable(corredor)
 	if h_offset_actual < minimo:
 		return lerp(h_offset_actual, minimo, clamp(velocidad_ajuste * delta, 0.0, 1.0))
-	if minimo <= carril_baranda and h_offset_actual > carril_baranda:
+	# NUEVO - en cada curva, algunos rivales (al azar) se abren hacia
+	# afuera y dejan el hueco pegado a la baranda, como en la vida real.
+	var apertura = _apertura_en_esta_curva(corredor)
+	if apertura > 0.0:
+		var destino = min(max(minimo, carril_baranda) + apertura, h_offset_maximo_curva)
+		if h_offset_actual < destino:
+			return lerp(h_offset_actual, destino, clamp(velocidad_abrirse_curva * delta, 0.0, 1.0))
+		return lerp(h_offset_actual, destino, clamp(velocidad_regreso_baranda_curva * delta, 0.0, 1.0))
+	if minimo <= carril_baranda and h_offset_actual > carril_baranda and _busca_baranda(corredor):
 		return lerp(h_offset_actual, carril_baranda, clamp(velocidad_regreso_baranda_curva * delta, 0.0, 1.0))
 	return h_offset_actual
+
+
+# ------------------------------------------------------------
+# ABRIRSE EN LA CURVA
+# Al entrar a cada curva, cada rival tira una moneda: si le toca, se
+# va abriendo despacio hacia afuera unos metros (al azar) y deja el
+# hueco junto a la baranda. Al salir de la curva vuelve a buscar la
+# baranda como siempre. Se mueve despacio a proposito (los cambios
+# bruscos en curva descarrilaban caballos en sesiones anteriores).
+# ------------------------------------------------------------
+export var abrirse_en_curva = false
+export var probabilidad_abrirse = 0.6     # 0.6 = 6 de cada 10 rivales se abren en cada curva
+export var apertura_min = 6.0             # cuanto se abren, como minimo
+export var apertura_max = 20.0            # y como maximo
+export var velocidad_abrirse_curva = 0.3  # que tan rapido se abren (bajo = suave)
+export var h_offset_maximo_curva = 130.0  # nunca mas afuera que esto (la arena llega a 165)
+var _apertura = {}
+var _ultima_vez_en_curva = {}
+
+func _apertura_en_esta_curva(corredor) -> float:
+	if not abrirse_en_curva:
+		return 0.0
+	# Si hace mas de 1 segundo que no estaba en curva, es una curva nueva:
+	# se vuelve a tirar la moneda.
+	var ultima = _ultima_vez_en_curva.get(corredor, -100.0)
+	_ultima_vez_en_curva[corredor] = _tiempo_carrera
+	if not _apertura.has(corredor) or _tiempo_carrera - ultima > 1.0:
+		var a = 0.0
+		if randf() < probabilidad_abrirse:
+			a = rand_range(apertura_min, apertura_max)
+		_apertura[corredor] = a
+	return _apertura[corredor]
 
 
 # Devuelve true si a "corredor" lo esta bloqueando alguien mas
@@ -1217,7 +1522,10 @@ func _aplicar_busqueda_baranda(delta):
 			continue
 		var objetivo = _obtener_minimo_lateral_estable(corredor)
 		if corredor.h_offset > objetivo:
-			corredor.h_offset = lerp(corredor.h_offset, objetivo, clamp(velocidad_busqueda_baranda * delta, 0.0, 1.0))
+			var paso = (corredor.h_offset - objetivo) * clamp(velocidad_busqueda_baranda * delta, 0.0, 1.0)
+			if rapidez_max_lateral > 0.0:
+				paso = min(paso, rapidez_max_lateral * delta)
+			corredor.h_offset -= paso
 
 
 func _comparar_recorrido_para_colision(a, b) -> bool:
@@ -1289,3 +1597,88 @@ func todos_terminaron() -> bool:
 		if not ha_terminado(corredor):
 			return false
 	return true
+
+
+# ------------------------------------------------------------
+# SORTEO DE PUESTOS
+# En cada carrera se sortea en que casilla sale cada caballo (el
+# jugador tambien), y ese mismo es su numero de mandil.
+# ------------------------------------------------------------
+export var sortear_puestos = true
+var _puesto_de = {}
+var _escena_del_sorteo = 0
+
+func obtener_puesto(enrutador) -> int:
+	var propio = int(enrutador.name.substr(17))
+	if not sortear_puestos:
+		return propio
+	var escena = get_tree().current_scene
+	var id_escena = 0
+	if escena:
+		id_escena = escena.get_instance_id()
+	if id_escena != _escena_del_sorteo or _puesto_de.empty():
+		_hacer_sorteo(enrutador.get_parent())
+		_escena_del_sorteo = id_escena
+	return _puesto_de.get(enrutador.name, propio)
+
+func _hacer_sorteo(camino):
+	_puesto_de.clear()
+	if camino == null:
+		return
+	var nombres = []
+	for hijo in camino.get_children():
+		if hijo is PathFollow and hijo.name.begins_with("Enrutador_Caballo"):
+			nombres.append(hijo.name)
+	var puestos = []
+	for i in range(nombres.size()):
+		puestos.append(i + 1)
+	randomize()
+	puestos.shuffle()
+	for i in range(nombres.size()):
+		_puesto_de[nombres[i]] = puestos[i]
+	print("[BDG-Sorteo] ", _puesto_de)
+
+
+# ------------------------------------------------------------
+# ORDEN DE LLEGADA REAL (del 2do en adelante)
+# ------------------------------------------------------------
+# Antes el orden completo quedaba congelado en el instante en que
+# cruzaba el GANADOR: del 2do para atras se ordenaba por la distancia
+# que llevaba cada uno en ese momento. Si un caballo pasaba a otro en
+# los ultimos metros (remate con latigo y arreo), igual quedaba detras.
+# Ahora, despues del ganador, cada caballo entra en su puesto en el
+# cuadro exacto en que su nariz toca la raya. Si dos cruzan en el mismo
+# cuadro, va primero el que la toco antes (misma regla del ganador).
+# Los que todavia no llegan van al final, por distancia.
+func _actualizar_orden_llegada():
+	if _llegados_en_orden.empty():
+		for corredor in _orden_llegada_congelado:
+			if is_instance_valid(corredor) and ha_terminado(corredor):
+				_llegados_en_orden.append(corredor)
+	var nuevos = []
+	var faltan = []
+	for corredor in _corredores:
+		if not is_instance_valid(corredor) or _llegados_en_orden.has(corredor):
+			continue
+		if ha_terminado(corredor):
+			nuevos.append(corredor)
+		else:
+			faltan.append(corredor)
+	if nuevos.empty():
+		return
+	_fraccion_cruce.clear()
+	for corredor in nuevos:
+		_fraccion_cruce[corredor] = _fraccion_desde_que_cruzo(corredor)
+	nuevos.sort_custom(self, "_comparar_cruce")
+	for corredor in nuevos:
+		_llegados_en_orden.append(corredor)
+	faltan.sort_custom(self, "_comparar_recorrido_vivo")
+	_orden_llegada_congelado = _llegados_en_orden + faltan
+	if mostrar_diagnostico:
+		for corredor in nuevos:
+			print("[BDG] PUESTO ", _llegados_en_orden.find(corredor) + 1, ": ", corredor.name)
+	emit_signal("orden_llegada_actualizado")
+
+
+func _comparar_recorrido_vivo(a, b) -> bool:
+	return obtener_recorrido(a) > obtener_recorrido(b)

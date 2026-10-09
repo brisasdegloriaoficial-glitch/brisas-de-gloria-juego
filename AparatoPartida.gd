@@ -113,6 +113,57 @@ export var color_conteo = Color(1.0, 0.9, 0.35)
 
 export var mostrar_diagnostico = true setget _set_mostrar_diagnostico
 
+# ============================================================
+# APARATO NUEVO (estilo hipodromo real): estructura verde, cartel
+# con arco arriba, placas de colores y puertas dobles que se abren
+# de golpe en la largada. Desmarcar "Aparato Nuevo" = el de antes.
+# Todo va sin sombreado: el color que pongas es el que se ve.
+# PESO: estructura, cartel, placas y puertas van en 5 dibujos en
+# total (el aparato de antes eran unas 197 piezas).
+# ============================================================
+export var aparato_nuevo = true
+export var alto_estructura = 12.0
+export var alto_puertas = 7.6
+export var altura_puertas_del_piso = 0.6
+# Parte de arriba de cada puerta que es rejilla (el resto es panel).
+export var proporcion_rejilla = 0.5
+export var tamano_placa = 2.4
+export var altura_placas = 10.3
+# Parte del ancho total del aparato que ocupa el cartel de arriba.
+export var ancho_cartel = 0.82
+export var mostrar_cartel = true
+export var mostrar_ruedas = true
+export var radio_ruedas = 1.6
+export var angulo_apertura = 95.0
+export var segundos_apertura = 0.35
+export var color_estructura_nueva = Color("0b7a4b")
+export var color_tabiques = Color("086339")
+export var color_faja = Color("096b41")
+export var color_panel_puerta = Color("0e8f58")
+export var color_rejilla = Color("eef1f5")
+export var color_ruedas = Color("141414")
+export var color_fondo_cartel = Color("0b7a4b")
+export var color_letras_cartel = Color("ffffff")
+# Colores oficiales de las mantillas, del 1 al 15 (fondo y numero).
+export(Array, Color) var colores_placas = [Color("e53935"), Color("ffffff"), Color("1e63d6"), Color("ffd400"), Color("2eae4a"), Color("111111"), Color("ff7a00"), Color("ff5fa2"), Color("29c5f6"), Color("8e24aa"), Color("c8c8c8"), Color("a4d65e"), Color("7b4a2e"), Color("8a1538"), Color("d8c08c")]
+export(Array, Color) var colores_numeros = [Color("ffffff"), Color("111111"), Color("ffffff"), Color("111111"), Color("ffffff"), Color("ffd400"), Color("111111"), Color("111111"), Color("d32f2f"), Color("ffffff"), Color("d32f2f"), Color("111111"), Color("ffffff"), Color("ffd400"), Color("111111")]
+export var ruta_cartel_forma = "res://Aparato_Cartel_Forma.png"
+export var ruta_cartel_texto = "res://Aparato_Cartel_Texto.png"
+export var ruta_numeros = "res://Aparato_Numeros.png"
+export var ruta_puerta = "res://Aparato_Puerta.png"
+
+var _mm_puertas = null
+var _puertas_frente = []
+var _t_apertura = -1.0
+var _firma_nueva = ""
+# El 1 va siempre en la casilla de TU caballo (pegada a la baranda) y
+# de ahi sigue 2, 3... hasta el 15. El aparato lo averigua solo al
+# arrancar la carrera, sin depender de "Numerar Al Reves".
+export var numero_1_junto_a_tu_caballo = true
+var _uno_en_menos_x = null
+var _uno_actual = true
+var _numeracion_revisada = false
+
 var _reconstruccion_pedida = false
 var _ya_se_oculto = false
 
@@ -160,7 +211,22 @@ func _reconstruir():
 # ------------------------------------------------------------
 func _process(delta):
 	if Engine.editor_hint:
+		# En el editor: si cambias algo del aparato nuevo, se rearma.
+		var f = _firma_aparato_nuevo()
+		if f != _firma_nueva:
+			_firma_nueva = f
+			_pedir_reconstruccion()
 		return
+
+	if aparato_nuevo and numero_1_junto_a_tu_caballo and not _numeracion_revisada:
+		_revisar_numeracion()
+
+	if _t_apertura >= 0.0:
+		_t_apertura += delta
+		var avance_puertas = clamp(_t_apertura / max(segundos_apertura, 0.01), 0.0, 1.0)
+		_poner_puertas(1.0 - pow(1.0 - avance_puertas, 3))
+		if avance_puertas >= 1.0:
+			_t_apertura = -1.0
 
 	if hacer_conteo_de_largada and not _largaron:
 		_actualizar_conteo(delta)
@@ -191,11 +257,21 @@ func _process(delta):
 		return
 
 	var avance = fposmod(GestorNivel.obtener_offset_lider() - linea.offset, largo)
-	if avance >= distancia_para_ocultar and avance < largo * 0.5:
+	# Se oculta cuando cambia la camara que estaba mirando la largada.
+	# Respaldo: si la camara nunca cambia, se oculta a los metros de
+	# distancia_para_ocultar.
+	var camara_ahora = get_viewport().get_camera()
+	var antes_de_salir = avance < 1.0 or avance >= largo * 0.5
+	if antes_de_salir or not has_meta("camara_largada"):
+		set_meta("camara_largada", camara_ahora)
+		return
+	var cambio_camara = camara_ahora != get_meta("camara_largada")
+	var lejos = avance >= distancia_para_ocultar and avance < largo * 0.5
+	if cambio_camara or lejos:
 		visible = false
 		_ya_se_oculto = true
 		if mostrar_diagnostico:
-			print("[BDG-Gate] largaron, aparato oculto a los ", avance, "m")
+			print("[BDG-Gate] aparato oculto a los ", avance, "m (cambio de camara: ", cambio_camara, ")")
 
 
 func _borrar_lo_construido():
@@ -209,6 +285,9 @@ func _borrar_lo_construido():
 # CONSTRUCCION
 # ------------------------------------------------------------
 func _construir_aparato():
+	if aparato_nuevo:
+		_construir_aparato_nuevo()
+		return
 	var cuantas = int(max(cantidad_casillas, 1))
 	var ancho_total = cuantas * ancho_casilla
 
@@ -479,6 +558,8 @@ func _largar():
 	_retenidos.clear()
 	_largaron = true
 	_tiempo_texto_largada = duracion_texto_largada
+	# Se abren las puertas de adelante.
+	_t_apertura = 0.0
 
 	if _label_conteo:
 		_label_conteo.text = texto_de_largada
@@ -685,3 +766,276 @@ func _set_distancia_para_ocultar(valor):
 
 func _set_mostrar_diagnostico(valor):
 	mostrar_diagnostico = valor
+
+
+# ============================================================
+# APARATO NUEVO - CONSTRUCCION
+# ============================================================
+func _firma_aparato_nuevo():
+	return str([aparato_nuevo, alto_estructura, alto_puertas, altura_puertas_del_piso, proporcion_rejilla,
+		tamano_placa, altura_placas, ancho_cartel, mostrar_cartel, mostrar_ruedas, radio_ruedas,
+		color_estructura_nueva, color_tabiques, color_faja, color_panel_puerta, color_rejilla, color_ruedas,
+		color_fondo_cartel, color_letras_cartel, colores_placas, colores_numeros,
+		ruta_cartel_forma, ruta_cartel_texto, ruta_numeros, ruta_puerta])
+
+
+func _construir_aparato_nuevo():
+	var n = int(max(cantidad_casillas, 1))
+	var A = ancho_casilla
+	var L = largo_casilla
+	var W = n * A
+	var x0 = -W / 2.0 + corrimiento_lateral
+	var xm = x0 + W / 2.0
+	var zc = corrimiento_adelante
+	var zf = zc - L / 2.0
+	var zb = zc + L / 2.0
+	var y0 = altura_sobre_el_piso
+	var H = alto_estructura
+	var T = 0.4
+
+	var raiz = Spatial.new()
+	raiz.name = "Gate_Estructura"
+	add_child(raiz)
+
+	# --- 1) Estructura: todo en UNA pieza, cada parte con su color ---
+	var st = SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var alto_tabique = alto_puertas * 0.75
+	for i in range(n + 1):
+		var x = x0 + i * A
+		_caja_c(st, Vector3(x, y0 + H / 2.0, zf), Vector3(T, H, T), color_estructura_nueva)
+		_caja_c(st, Vector3(x, y0 + H / 2.0, zb), Vector3(T, H, T), color_estructura_nueva)
+		_caja_c(st, Vector3(x, y0 + H - 0.2, zc), Vector3(T, T, L), color_estructura_nueva)
+		_caja_c(st, Vector3(x, y0 + altura_puertas_del_piso + alto_tabique / 2.0, zc), Vector3(0.45, alto_tabique, L - 0.4), color_tabiques)
+	for z in [zf, zb]:
+		_caja_c(st, Vector3(xm, y0 + H, z), Vector3(W + T, T * 1.4, T * 1.4), color_estructura_nueva)
+		_caja_c(st, Vector3(xm, y0 + altura_puertas_del_piso + alto_puertas + 0.4, z), Vector3(W + T, T, T), color_estructura_nueva)
+		_caja_c(st, Vector3(xm, y0 + 0.45, z), Vector3(W + T, T, T), color_estructura_nueva)
+	_caja_c(st, Vector3(xm, y0 + altura_placas, zf), Vector3(W + T, tamano_placa + 0.4, 0.25), color_faja)
+	_caja_c(st, Vector3(xm, y0 + altura_placas, zb), Vector3(W + T, tamano_placa + 0.4, 0.25), color_faja)
+	if mostrar_ruedas:
+		for x in [x0 - 1.2, x0 + W + 1.2]:
+			for z in [zf + 1.0, zb - 1.0]:
+				_rueda(st, Vector3(x, y0 + radio_ruedas, z), radio_ruedas, 0.9, color_ruedas)
+			_caja_c(st, Vector3((x + (x0 if x < x0 else x0 + W)) / 2.0, y0 + radio_ruedas, zc), Vector3(abs(x - (x0 if x < x0 else x0 + W)) + T, 0.5, L - 1.0), color_estructura_nueva)
+	_agregar_malla(raiz, "Estructura", st, _mat_colores(null, false))
+
+	# --- 2) Placas con numero (fondo + numero en una sola pieza) ---
+	var tex_num = _cargar_tex(ruta_numeros)
+	if tex_num:
+		var sp = SurfaceTool.new()
+		sp.begin(Mesh.PRIMITIVE_TRIANGLES)
+		_uno_actual = (not numerar_al_reves) if _uno_en_menos_x == null else _uno_en_menos_x
+		for cara in [[zf - 0.15, -1.0], [zb + 0.15, 1.0]]:
+			for i in range(n):
+				var num = (i + 1) if _uno_actual else (n - i)
+				var fondo = _color_de(colores_placas, num, Color(1, 1, 1))
+				var letra = _color_de(colores_numeros, num, Color(0, 0, 0))
+				var cx = x0 + (i + 0.5) * A
+				var cy = y0 + altura_placas
+				_quad(sp, Vector3(cx, cy, cara[0]), tamano_placa, tamano_placa, cara[1], _celda(15), fondo)
+				_quad(sp, Vector3(cx, cy, cara[0] + 0.03 * cara[1]), tamano_placa * 0.9, tamano_placa * 0.9, cara[1], _celda((num - 1) % 15), letra)
+		_agregar_malla(raiz, "Placas", sp, _mat_colores(tex_num, true))
+
+	# --- 3) Cartel de arriba (forma que se tine + letras encima) ---
+	if mostrar_cartel:
+		var BW = W * clamp(ancho_cartel, 0.1, 1.0)
+		var tex_forma = _cargar_tex(ruta_cartel_forma)
+		var tex_texto = _cargar_tex(ruta_cartel_texto)
+		# El alto sale de la proporcion de la imagen del cartel.
+		var BH = BW * 300.0 / 2048.0
+		if tex_forma and tex_forma.get_width() > 0:
+			BH = BW * float(tex_forma.get_height()) / float(tex_forma.get_width())
+		var cy2 = y0 + H + 0.3 + BH / 2.0
+		if tex_forma:
+			var sf = SurfaceTool.new()
+			sf.begin(Mesh.PRIMITIVE_TRIANGLES)
+			_quad(sf, Vector3(xm, cy2, zf - 0.05), BW, BH, -1.0, Rect2(0, 0, 1, 1), color_fondo_cartel)
+			_quad(sf, Vector3(xm, cy2, zf + 0.05), BW, BH, 1.0, Rect2(0, 0, 1, 1), color_fondo_cartel)
+			_agregar_malla(raiz, "Cartel", sf, _mat_colores(tex_forma, true))
+		if tex_texto:
+			var sl = SurfaceTool.new()
+			sl.begin(Mesh.PRIMITIVE_TRIANGLES)
+			_quad(sl, Vector3(xm, cy2, zf - 0.1), BW, BH, -1.0, Rect2(0, 0, 1, 1), color_letras_cartel)
+			_quad(sl, Vector3(xm, cy2, zf + 0.1), BW, BH, 1.0, Rect2(0, 0, 1, 1), color_letras_cartel)
+			_agregar_malla(raiz, "CartelLetras", sl, _mat_colores(tex_texto, true))
+
+	# --- 4) Puertas: todas en un solo dibujo que se mueve ---
+	var tex_p = _cargar_tex(ruta_puerta)
+	_mm_puertas = null
+	_puertas_frente.clear()
+	if tex_p:
+		var w = A / 2.0 - 0.3
+		var corte = alto_puertas * (1.0 - clamp(proporcion_rejilla, 0.0, 1.0))
+		var sd = SurfaceTool.new()
+		sd.begin(Mesh.PRIMITIVE_TRIANGLES)
+		# La puerta va de la bisagra (x = 0) hacia +x, de pie en el piso.
+		_quad_puerta(sd, w, 0.0, corte, Rect2(0, 0.5, 1, 0.5), color_panel_puerta)
+		_quad_puerta(sd, w, corte, alto_puertas, Rect2(0, 0, 1, 0.5), color_rejilla)
+		var malla_puerta = sd.commit()
+		var mm = MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = malla_puerta
+		mm.instance_count = n * 4
+		var k = 0
+		var yb = y0 + altura_puertas_del_piso
+		for i in range(n):
+			var xi = x0 + i * A + 0.25
+			var xd = x0 + (i + 1) * A - 0.25
+			for z in [zf, zb]:
+				var t_izq = Transform(Basis(), Vector3(xi, yb, z))
+				var t_der = Transform(Basis().scaled(Vector3(-1, 1, 1)), Vector3(xd, yb, z))
+				mm.set_instance_transform(k, t_izq)
+				mm.set_instance_transform(k + 1, t_der)
+				if z == zf:
+					_puertas_frente.append([k, Vector3(xi, yb, z), false])
+					_puertas_frente.append([k + 1, Vector3(xd, yb, z), true])
+				k += 2
+		var mmi = MultiMeshInstance.new()
+		mmi.name = "Puertas"
+		mmi.multimesh = mm
+		mmi.material_override = _mat_colores(tex_p, true)
+		raiz.add_child(mmi)
+		_mm_puertas = mm
+	_t_apertura = -1.0
+
+	if mostrar_diagnostico:
+		print("[BDG-Gate] aparato NUEVO construido: ", n, " casillas | ancho total=", W)
+
+
+# Mira de que punta del aparato esta tu caballo y, si el 1 quedo del
+# otro lado, rearma el aparato con la numeracion al derecho.
+func _revisar_numeracion():
+	var camino = _obtener_trackpath()
+	if camino == null:
+		return
+	var jugador = camino.get_node_or_null("Enrutador_Caballo1")
+	if jugador == null:
+		return
+	_numeracion_revisada = true
+	var n = int(max(cantidad_casillas, 1))
+	var x0 = -n * ancho_casilla / 2.0 + corrimiento_lateral
+	var lx = to_local(jugador.global_transform.origin).x
+	var menos = abs(lx - (x0 + ancho_casilla * 0.5)) < abs(lx - (x0 + ancho_casilla * (n - 0.5)))
+	if menos != _uno_actual:
+		_uno_en_menos_x = menos
+		_reconstruir()
+	if mostrar_diagnostico:
+		print("[BDG-Gate] el 1 va en la punta ", ("izquierda (-x)" if menos else "derecha (+x)"), " del aparato, junto a tu caballo.")
+
+
+# 0 = cerradas, 1 = abiertas del todo.
+func _poner_puertas(avance):
+	if _mm_puertas == null:
+		return
+	var ang = deg2rad(angulo_apertura) * avance
+	for p in _puertas_frente:
+		var b = Basis(Vector3.UP, ang)
+		if p[2]:
+			b = Basis(Vector3.UP, -ang) * Basis().scaled(Vector3(-1, 1, 1))
+		_mm_puertas.set_instance_transform(p[0], Transform(b, p[1]))
+
+
+func _color_de(lista, num, por_defecto):
+	if lista == null or lista.size() == 0:
+		return por_defecto
+	return lista[(num - 1) % lista.size()]
+
+
+# Celda del atlas de numeros (4 x 4): 0..14 = numeros 1..15, 15 = blanco lleno.
+func _celda(i):
+	return Rect2((i % 4) * 0.25, int(i / 4) * 0.25, 0.25, 0.25)
+
+
+func _cargar_tex(ruta):
+	if ruta == "" or not ResourceLoader.exists(ruta):
+		if mostrar_diagnostico:
+			print("[BDG-Gate] falta la imagen: ", ruta)
+		return null
+	return load(ruta)
+
+
+func _mat_colores(tex, con_recorte):
+	var m = SpatialMaterial.new()
+	m.vertex_color_use_as_albedo = true
+	# Los colores del Inspector estan escritos como se ven en pantalla:
+	# sin esto Godot los aclaraba y quedaban como pastel.
+	m.vertex_color_is_srgb = true
+	m.flags_unshaded = sin_sombreado
+	m.params_cull_mode = SpatialMaterial.CULL_DISABLED
+	if tex:
+		m.albedo_texture = tex
+	if con_recorte:
+		m.params_use_alpha_scissor = true
+		m.params_alpha_scissor_threshold = 0.5
+	return m
+
+
+func _agregar_malla(padre, nombre, st, mat):
+	var mi = MeshInstance.new()
+	mi.name = nombre
+	st.generate_normals()
+	mi.mesh = st.commit()
+	mi.material_override = mat
+	padre.add_child(mi)
+
+
+func _caja_c(st, c, t, color):
+	var h = t / 2.0
+	var caras = [
+		[Vector3(1, 0, 0), [Vector3(h.x, -h.y, -h.z), Vector3(h.x, h.y, -h.z), Vector3(h.x, h.y, h.z), Vector3(h.x, -h.y, h.z)]],
+		[Vector3(-1, 0, 0), [Vector3(-h.x, -h.y, h.z), Vector3(-h.x, h.y, h.z), Vector3(-h.x, h.y, -h.z), Vector3(-h.x, -h.y, -h.z)]],
+		[Vector3(0, 1, 0), [Vector3(-h.x, h.y, -h.z), Vector3(-h.x, h.y, h.z), Vector3(h.x, h.y, h.z), Vector3(h.x, h.y, -h.z)]],
+		[Vector3(0, -1, 0), [Vector3(-h.x, -h.y, h.z), Vector3(-h.x, -h.y, -h.z), Vector3(h.x, -h.y, -h.z), Vector3(h.x, -h.y, h.z)]],
+		[Vector3(0, 0, 1), [Vector3(h.x, -h.y, h.z), Vector3(h.x, h.y, h.z), Vector3(-h.x, h.y, h.z), Vector3(-h.x, -h.y, h.z)]],
+		[Vector3(0, 0, -1), [Vector3(-h.x, -h.y, -h.z), Vector3(-h.x, h.y, -h.z), Vector3(h.x, h.y, -h.z), Vector3(h.x, -h.y, -h.z)]],
+	]
+	for cara in caras:
+		var v = cara[1]
+		for idx in [0, 1, 2, 0, 2, 3]:
+			st.add_color(color)
+			st.add_uv(Vector2(0, 0))
+			st.add_vertex(c + v[idx])
+
+
+func _rueda(st, c, r, ancho, color):
+	var lados = 16
+	for k in range(lados):
+		var a0 = TAU * k / lados
+		var a1 = TAU * (k + 1) / lados
+		var p0 = Vector3(0, cos(a0) * r, sin(a0) * r)
+		var p1 = Vector3(0, cos(a1) * r, sin(a1) * r)
+		var dx = Vector3(ancho / 2.0, 0, 0)
+		for tri in [[c + p0 + dx, c + p1 + dx, c + p1 - dx], [c + p0 + dx, c + p1 - dx, c + p0 - dx],
+				[c + dx, c + p1 + dx, c + p0 + dx], [c - dx, c + p0 - dx, c + p1 - dx]]:
+			for v in tri:
+				st.add_color(color)
+				st.add_uv(Vector2(0, 0))
+				st.add_vertex(v)
+
+
+# Cuadro de frente. lado = -1 mira hacia adelante (-Z), 1 hacia atras.
+# La imagen se ve derecha (no espejada) desde el lado al que mira.
+func _quad(st, c, ancho, alto, lado, uv, color):
+	var hx = ancho / 2.0 * -lado
+	var hy = alto / 2.0
+	var u0 = uv.position.x
+	var v0 = uv.position.y
+	var u1 = uv.position.x + uv.size.x
+	var v1 = uv.position.y + uv.size.y
+	var p = [Vector3(-hx, hy, 0), Vector3(hx, hy, 0), Vector3(hx, -hy, 0), Vector3(-hx, -hy, 0)]
+	var t = [Vector2(u1, v0), Vector2(u0, v0), Vector2(u0, v1), Vector2(u1, v1)]
+	for idx in [0, 1, 2, 0, 2, 3]:
+		st.add_color(color)
+		st.add_uv(t[idx])
+		st.add_vertex(c + p[idx])
+
+
+func _quad_puerta(st, w, y_abajo, y_arriba, uv, color):
+	var p = [Vector3(0, y_arriba, 0), Vector3(w, y_arriba, 0), Vector3(w, y_abajo, 0), Vector3(0, y_abajo, 0)]
+	var t = [Vector2(uv.position.x, uv.position.y), Vector2(uv.position.x + uv.size.x, uv.position.y),
+		Vector2(uv.position.x + uv.size.x, uv.position.y + uv.size.y), Vector2(uv.position.x, uv.position.y + uv.size.y)]
+	for idx in [0, 1, 2, 0, 2, 3]:
+		st.add_color(color)
+		st.add_uv(t[idx])
+		st.add_vertex(p[idx])

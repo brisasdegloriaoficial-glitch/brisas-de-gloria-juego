@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/timbre.ogg-4c36c0ec3c67c295df0af405a246d676.oggstr"
+
+[deps]
+
+source_file="res://Sonidos/timbre.ogg"
+dest_files=[ "res://.import/timbre.ogg-4c36c0ec3c67c295df0af405a246d676.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

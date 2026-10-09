@@ -48,7 +48,7 @@ func _reconstruir():
 	var trackpath = _buscar_trackpath()
 	if trackpath == null or trackpath.curve == null:
 		return
-	var curve = trackpath.curve
+	var curve = trackpath.curva_grama if trackpath.get("curva_grama") else trackpath.curve
 	var largo_total = curve.get_baked_length()
 	if largo_total <= 0:
 		return

@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/foto_flash.ogg-41b9169f693683cf577f828dfe6ac5d0.oggstr"
+
+[deps]
+
+source_file="res://Sonidos/foto_flash.ogg"
+dest_files=[ "res://.import/foto_flash.ogg-41b9169f693683cf577f828dfe6ac5d0.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

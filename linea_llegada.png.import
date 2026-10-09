@@ -4,15 +4,16 @@ importer="texture"
 type="StreamTexture"
 path.s3tc="res://.import/linea_llegada.png-1e619deadc789eb45c3cd3ea16177046.s3tc.stex"
 path.etc2="res://.import/linea_llegada.png-1e619deadc789eb45c3cd3ea16177046.etc2.stex"
+path.etc="res://.import/linea_llegada.png-1e619deadc789eb45c3cd3ea16177046.etc.stex"
 metadata={
-"imported_formats": [ "s3tc", "etc2" ],
+"imported_formats": [ "s3tc", "etc2", "etc" ],
 "vram_texture": true
 }
 
 [deps]
 
 source_file="res://linea_llegada.png"
-dest_files=[ "res://.import/linea_llegada.png-1e619deadc789eb45c3cd3ea16177046.s3tc.stex", "res://.import/linea_llegada.png-1e619deadc789eb45c3cd3ea16177046.etc2.stex" ]
+dest_files=[ "res://.import/linea_llegada.png-1e619deadc789eb45c3cd3ea16177046.s3tc.stex", "res://.import/linea_llegada.png-1e619deadc789eb45c3cd3ea16177046.etc2.stex", "res://.import/linea_llegada.png-1e619deadc789eb45c3cd3ea16177046.etc.stex" ]
 
 [params]
 

@@ -37,3 +37,7 @@ export var arreo_limite = 30
 # distancia_metros), que daba numeros disparatados en las carreras
 # largas.
 export var estamina_base = 100.0
+
+# NUEVO - true cuando la carrera elegida es en la pista de arena.
+# Lo pone SelectorDistancias por boton. TrackPath lo lee al arrancar.
+export var pista_arena = false

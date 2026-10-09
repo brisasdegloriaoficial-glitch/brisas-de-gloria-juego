@@ -5,6 +5,30 @@ export var largo_recta = 804.0 setget set_largo_recta
 export var radio_curva = 318.0 setget set_radio_curva
 export var puntos_por_curva = 24 setget set_puntos_por_curva
 
+# ============================================================
+# PISTA DE ARENA (la anaranjada de adentro)
+# ============================================================
+# Cuando se elige una carrera de arena, el camino de los caballos
+# se arma con estas medidas en vez de las de la grama. La grama,
+# sus barandas y los arbustos NO se mueven: siguen usando el ovalo
+# de grama (curva_grama).
+# Largo Recta Arena: largo de cada recta de la arena.
+# Radio Curva Arena: radio de las curvas de la arena, medido en la
+#   baranda de adentro (por ahi va el carril 0).
+# OJO: en la arena la largada tiene que caer en la recta de atras
+# (la de enfrente a la meta), igual que todas las carreras de grama.
+# En la arena no se dibuja la franja de salida (roja y blanca).
+export var largo_recta_arena = 341.7 setget set_largo_recta_arena
+export var radio_curva_arena = 137.0 setget set_radio_curva_arena
+# NUEVO - Que tan pegados a la baranda interior corren los rivales en la
+# arena (mas bajo = mas pegados). La grama no cambia: usa su propio
+# carril (carril_baranda de GestorNivel).
+export var carril_baranda_arena = 2.5
+
+# El ovalo de grama, siempre. Lo usan los que dibujan la grama,
+# las barandas y los arbustos, para que no se muden a la arena.
+var curva_grama = null
+
 # Se usa solo si por algun motivo no existe Meta_LLegada en la escena
 # (caso extremo, no deberia pasar nunca en el proyecto actual).
 export var margen_salida = 40.0
@@ -68,12 +92,33 @@ export var z_comun_en_la_largada = -4.72
 
 func _ready():
 	generar_ovalo()
+	if es_carrera_de_arena():
+		_ocultar_franja_de_salida()
+	_poner_carril_baranda()
+
+
+# NUEVO - En la arena los rivales usan Carril Baranda Arena. En la grama
+# se devuelve el carril de siempre (el que trae GestorNivel).
+func _poner_carril_baranda():
+	if Engine.is_editor_hint():
+		return
+	var gestor = get_node_or_null("/root/GestorNivel")
+	if gestor == null:
+		return
+	if not gestor.has_meta("carril_baranda_grama"):
+		gestor.set_meta("carril_baranda_grama", gestor.carril_baranda)
+	if es_carrera_de_arena():
+		gestor.carril_baranda = carril_baranda_arena
+	else:
+		gestor.carril_baranda = gestor.get_meta("carril_baranda_grama")
 
 
 func _enter_tree():
 	if Engine.is_editor_hint():
 		return
 	generar_ovalo()
+	if es_carrera_de_arena():
+		_poner_meta_en_recta_de_arena()
 	_centrar_meta_ovalo()
 	_preparar_meta_recta()
 	_ubicar_salida()
@@ -295,33 +340,79 @@ func set_puntos_por_curva(valor):
 	puntos_por_curva = valor
 	generar_ovalo()
 
+func set_largo_recta_arena(valor):
+	largo_recta_arena = valor
+	generar_ovalo()
+
+func set_radio_curva_arena(valor):
+	radio_curva_arena = valor
+	generar_ovalo()
+
+
+# true solo jugando (nunca en el editor) y si se eligio una carrera de arena.
+func es_carrera_de_arena() -> bool:
+	if Engine.is_editor_hint():
+		return false
+	var config = get_node_or_null("/root/ConfiguracionCarrera")
+	return config != null and config.get("pista_arena") == true
+
+
+# Arma el ovalo de grama (siempre) y, si la carrera es de arena,
+# el camino de los caballos pasa a ser el ovalo de arena.
 func generar_ovalo():
+	curva_grama = _armar_ovalo(largo_recta, radio_curva)
+	if es_carrera_de_arena():
+		curve = _armar_ovalo(largo_recta_arena, radio_curva_arena)
+	else:
+		curve = curva_grama
+
+
+# Deja Meta_LLegada en la mitad de la recta delantera de la arena
+# (despues _centrar_meta_ovalo la afina igual que en la grama).
+func _poner_meta_en_recta_de_arena():
+	var meta_ovalo = get_node_or_null("Meta_LLegada")
+	if meta_ovalo == null or curve == null:
+		return
+	meta_ovalo.offset = curve.get_closest_offset(Vector3(0, 0, radio_curva_arena))
+
+
+# En la arena se esconde la franja de salida (roja y blanca) del piso.
+func _ocultar_franja_de_salida():
+	var partida = get_node_or_null("Aparato_Partida")
+	if partida == null:
+		return
+	for hijo in partida.get_children():
+		if hijo is MeshInstance and "LineaVisual" in hijo.name:
+			hijo.visible = false
+
+
+func _armar_ovalo(largo, radio):
 	var puntos = []
 	var direcciones = []
 
 	var dir_recta_trasera = Vector3(-1, 0, 0)
-	puntos.append(Vector3(largo_recta / 2, 0, -radio_curva))
+	puntos.append(Vector3(largo / 2, 0, -radio))
 	direcciones.append(dir_recta_trasera)
-	puntos.append(Vector3(-largo_recta / 2, 0, -radio_curva))
+	puntos.append(Vector3(-largo / 2, 0, -radio))
 	direcciones.append(dir_recta_trasera)
 
 	for i in range(1, puntos_por_curva):
 		var angulo = -PI / 2 - (PI * i / puntos_por_curva)
-		var x = -largo_recta / 2 + radio_curva * cos(angulo)
-		var z = radio_curva * sin(angulo)
+		var x = -largo / 2 + radio * cos(angulo)
+		var z = radio * sin(angulo)
 		puntos.append(Vector3(x, 0, z))
 		direcciones.append(Vector3(sin(angulo), 0, -cos(angulo)))
 
 	var dir_recta_delantera = Vector3(1, 0, 0)
-	puntos.append(Vector3(-largo_recta / 2, 0, radio_curva))
+	puntos.append(Vector3(-largo / 2, 0, radio))
 	direcciones.append(dir_recta_delantera)
-	puntos.append(Vector3(largo_recta / 2, 0, radio_curva))
+	puntos.append(Vector3(largo / 2, 0, radio))
 	direcciones.append(dir_recta_delantera)
 
 	for i in range(1, puntos_por_curva):
 		var angulo = PI / 2 - (PI * i / puntos_por_curva)
-		var x = largo_recta / 2 + radio_curva * cos(angulo)
-		var z = radio_curva * sin(angulo)
+		var x = largo / 2 + radio * cos(angulo)
+		var z = radio * sin(angulo)
 		puntos.append(Vector3(x, 0, z))
 		direcciones.append(Vector3(sin(angulo), 0, -cos(angulo)))
 
@@ -338,7 +429,7 @@ func generar_ovalo():
 	var manija_cierre = direcciones[0] * largo_manija_cierre
 	nueva_curva.add_point(puntos[0], -manija_cierre, manija_cierre)
 
-	curve = nueva_curva
+	return nueva_curva
 
 
 # Deja el modelo del caballo a la misma altura de pista que todos los

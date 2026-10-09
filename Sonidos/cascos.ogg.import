@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/cascos.ogg-73e93e21ddb6dc0e0e19ee8671230aba.oggstr"
+
+[deps]
+
+source_file="res://Sonidos/cascos.ogg"
+dest_files=[ "res://.import/cascos.ogg-73e93e21ddb6dc0e0e19ee8671230aba.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

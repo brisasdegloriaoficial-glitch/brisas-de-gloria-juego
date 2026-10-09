@@ -33,9 +33,14 @@ export var distancia = 45.0 setget set_distancia
 export var altura_camara = 10.0
 export var altura_de_mira = 1.5
 
-# Prendido = se centra en TODO el lote. Apagado = sigue solo al
-# caballo del jugador.
+# Prendido = mira al lote, pero NUNCA a los que vienen detras de tu
+# caballo: si el lote queda atras, se centra en ti. Apagado = sigue
+# solo a tu caballo.
 export var seguir_a_todo_el_lote = true
+# Cuanto se deja llevar por el lote cuando la camara esta lejos.
+# 0 = siempre tu caballo; 1 = el lote (sin pasar nunca atras de ti).
+# Al acercar con el zoom, se va centrando sola en tu caballo.
+export var peso_del_lote = 1.0
 
 # Escribe una linea por segundo en el panel de Salida con las
 # posiciones. Solo para cuando algo no se ve.
@@ -56,6 +61,7 @@ var _enrutadores = []
 var _busque = false
 var _reloj_diagnostico = 0.0
 var _avise_problema = false
+var _modelo = null
 
 
 func _ready():
@@ -129,9 +135,10 @@ func _process(delta):
 # ------------------------------------------------------------
 func _centro_del_lote() -> Vector3:
 	_buscar_enrutadores()
+	var jugador = _centro_jugador()
 
 	if not seguir_a_todo_el_lote or _enrutadores.size() == 0:
-		return objetivo.global_transform.origin
+		return jugador
 
 	var suma = Vector3.ZERO
 	var cuantos = 0
@@ -140,8 +147,49 @@ func _centro_del_lote() -> Vector3:
 			suma += e.global_transform.origin
 			cuantos += 1
 	if cuantos == 0:
-		return objetivo.global_transform.origin
-	return suma / cuantos
+		return jugador
+	var lote = suma / cuantos
+	# Nunca mas atras que tu caballo: si el lote va detras, se corre
+	# hacia adelante hasta quedar a tu altura.
+	var adelante = _direccion_de_carrera()
+	var avance = (lote - jugador).dot(adelante)
+	if avance < 0.0:
+		lote -= adelante * avance
+	# Lejos = mira al lote; cerca = mira a tu caballo.
+	var rango = max(distancia_maxima - distancia_minima, 0.001)
+	var t = clamp((distancia - distancia_minima) / rango, 0.0, 1.0)
+	return jugador.linear_interpolate(lote, t * clamp(peso_del_lote, 0.0, 1.0))
+
+
+# Centro del caballo del jugador que se ve (no el punto del enrutador,
+# que queda corrido unos metros).
+func _centro_jugador() -> Vector3:
+	var p = objetivo.global_transform.origin
+	if _modelo == null or not is_instance_valid(_modelo) or not _modelo.is_visible_in_tree():
+		_modelo = null
+		for h in objetivo.get_children():
+			if h is Spatial and h.name.begins_with("Caballo") and h.is_visible_in_tree():
+				_modelo = h
+				break
+	if _modelo == null:
+		return p
+	var caja = _caja(_modelo)
+	if caja == null:
+		return p
+	var centro = caja.position + caja.size * 0.5
+	return Vector3(centro.x, p.y, centro.z)
+
+
+func _caja(n):
+	var total = null
+	for h in n.get_children():
+		if h is MeshInstance and h.is_visible_in_tree():
+			var c = h.get_transformed_aabb()
+			total = c if total == null else total.merge(c)
+		var sub = _caja(h)
+		if sub != null:
+			total = sub if total == null else total.merge(sub)
+	return total
 
 
 func _buscar_enrutadores():

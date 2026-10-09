@@ -1,4 +1,5 @@
 extends CanvasLayer
+# VERSION: lista de llegada que se actualiza (oct 2026)
 
 # ============================================================
 #  FOTO FINISH  -  Brisas de Gloria
@@ -25,7 +26,7 @@ extends CanvasLayer
 # Nodo TrackPath. Si lo dejas vacio lo busca solo en "../TrackPath".
 export(NodePath) var camino_pista_path
 
-# Tu caballo, para marcarte en la lista con "<-- VOS".
+# Tu caballo, para marcarte en la lista con "<-- TU".
 # Si lo dejas vacio busca "../TrackPath/Enrutador_Caballo1".
 export(NodePath) var enrutador_jugador_path
 
@@ -76,9 +77,9 @@ export var distancia_para_encender = 200.0
 # ---------- CUANDO APARECE EL CARTEL ----------
 
 # El cartel salia apenas el JUEZ tenia ganador, o sea cuando cruzaba
-# el puntero. Si vos no eras el puntero, aparecia varios segundos
+# el puntero. Si TU no eras el puntero, aparecia varios segundos
 # antes que tu propio aviso violeta. Con esto espera a que cruces
-# VOS, igual que el aviso.
+# TU, igual que el aviso.
 # Apagalo (false) y vuelve a salir con el puntero, como antes.
 export var esperar_al_jugador = true
 
@@ -534,6 +535,8 @@ func _mostrar_cartel():
 
 	_lista.visible = mostrar_orden
 	_lista.text = _armar_orden()
+	if GestorNivel and not GestorNivel.is_connected("orden_llegada_actualizado", self, "_al_cambiar_orden"):
+		GestorNivel.connect("orden_llegada_actualizado", self, "_al_cambiar_orden")
 	_lista.rect_position = Vector2(10, 8)
 
 	if _boton:
@@ -599,5 +602,11 @@ func _nombre_corto(corredor) -> String:
 	var nombre = str(corredor.name).replace("Enrutador_Caballo", "N° ")
 	nombre = nombre.replace("Enrutador_", "")
 	if corredor == _enrutador_jugador:
-		nombre += "   <-- VOS"
+		nombre += "   <-- TU"
 	return nombre
+
+
+# Cada vez que otro caballo cruza la raya, la lista se pone al dia.
+func _al_cambiar_orden():
+	if _lista and is_instance_valid(_lista) and _lista.visible:
+		_lista.text = _armar_orden()

@@ -1,0 +1,91 @@
+[gd_scene load_steps=13 format=2]
+
+[ext_resource path="res://Caballos/Jinete_Sentado.glb" type="PackedScene" id=1]
+[ext_resource path="res://Caballos/Caballo_Americano_01_Rigueado.gd" type="Script" id=2]
+[ext_resource path="res://Caballos/Caballo_Americano_01_Rigueado.glb" type="PackedScene" id=3]
+[ext_resource path="res://Caballos/Silla_Americano.glb" type="PackedScene" id=4]
+[ext_resource path="res://Caballos/Silla_Americano_Cuero.material" type="Material" id=5]
+[ext_resource path="res://Caballos/Jockey_Tripo_250926.gd" type="Script" id=6]
+[ext_resource path="res://Caballos/Cincha_Americano.glb" type="PackedScene" id=7]
+[ext_resource path="res://Caballos/Estribos.gd" type="Script" id=8]
+[ext_resource path="res://Caballos/Estribo_02.glb" type="PackedScene" id=9]
+[ext_resource path="res://Caballos/Brida_Americano.glb" type="PackedScene" id=10]
+[ext_resource path="res://Caballos/Riendas.gd" type="Script" id=11]
+[ext_resource path="res://Caballos/Latigo_Jockey_02.glb" type="PackedScene" id=12]
+
+[node name="Caballo_Americano_Completo" type="Spatial"]
+
+[node name="Caballo_Americano_01_Rigueado" parent="." instance=ExtResource( 3 )]
+transform = Transform( 42.14, 0, 0, 0, 42.14, 0, 0, 0, 42.14, -53.57, -13.38, -27.12 )
+script = ExtResource( 2 )
+trancos_etapa_3 = 3.0
+alcance_delanteras = 45.0
+alcance_traseras = 45.0
+rebote_cuerpo = 0.025
+largo_cuello = 1.0
+tamano_cabeza = 1.2
+cabeceo_cuello = 10.0
+compensar_cabeza = 0.3
+subir_nariz = 10.0
+tamano_rival_min = 1.0
+tamano_rival_max = 1.0
+
+[node name="BoneAttachment" type="BoneAttachment" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton" index="1"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0186831, 0.501145, -0.00228256 )
+bone_name = "bone_5"
+
+[node name="Silla_Americano" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton/BoneAttachment" instance=ExtResource( 4 )]
+transform = Transform( 1, 0, 1.49012e-07, 0, 1, 0, 0, 0, 1.1, 0.00999999, 0.001, 0.00100005 )
+
+[node name="Silla_Americano" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton/BoneAttachment/Silla_Americano" index="0"]
+material_override = ExtResource( 5 )
+
+[node name="Jockey_Tripo_250926" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton/BoneAttachment" instance=ExtResource( 1 )]
+transform = Transform( -2.88495e-08, 0.235447, -0.616574, 0, 0.616574, 0.235447, 0.66, 1.02917e-08, -2.69513e-08, 0.015, -0.205, 0.001 )
+script = ExtResource( 6 )
+muslos_adelante = -60.0
+abrir_pantorrillas = -75.0
+doblar_rodillas = 110.0
+inclinar_cintura = -110.0
+inclinar_pecho_bajo = 0.0
+inclinar_pecho_alto = 0.0
+levantar_cuello = 40.0
+levantar_cabeza = 20.0
+brazos_adelante = -120.0
+doblar_codos = -55.0
+juntar_manos = 6.0
+rebote_rodillas = 3.0
+rebote_cadera = 0.0
+empuje_brazos = 5.0
+vaiven_cuerpo = 1.5
+latigo_duracion_golpe = 0.7
+latigo_arriba_brazo = Vector3( 0, 0, -120 )
+latigo_modelo = ExtResource( 12 )
+latigo_giro = Vector3( -1, -47, -69 )
+latigo_grosor_vara = 1.5
+latigo_siempre_abajo = true
+latigo_como_extension = false
+color_casco = Color( 0.0392157, 0.0392157, 0.0392157, 1 )
+
+[node name="Estribos" type="Spatial" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton/BoneAttachment/Jockey_Tripo_250926"]
+script = ExtResource( 8 )
+modelo_estribo = ExtResource( 9 )
+enganche_silla = Vector3( -0.03, 0.02, 0.08 )
+
+[node name="Riendas" type="Spatial" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton/BoneAttachment/Jockey_Tripo_250926"]
+script = ExtResource( 11 )
+ancho_rienda = 10.0
+grosor_rienda = 2.0
+distancia_detalle = 80.0
+estado = "listas"
+
+[node name="Cincha_Americano" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton/BoneAttachment" instance=ExtResource( 7 )]
+
+[node name="BoneAttachment_Cabeza" type="BoneAttachment" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton" index="2"]
+transform = Transform( 1.19642, 0.0925818, 0, -0.0925818, 1.19642, 0, 0, 0, 1.2, -0.371209, 0.704974, -0.00228253 )
+bone_name = "bone_16"
+
+[node name="Brida_Americano" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton/BoneAttachment_Cabeza" instance=ExtResource( 10 )]
+
+[editable path="Caballo_Americano_01_Rigueado"]
+[editable path="Caballo_Americano_01_Rigueado/Armature/Skeleton/BoneAttachment/Silla_Americano"]

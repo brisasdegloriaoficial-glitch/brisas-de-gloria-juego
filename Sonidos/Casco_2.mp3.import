@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/Casco_2.mp3-11fcca11fbb0ca267f761cc2be3effdb.mp3str"
+
+[deps]
+
+source_file="res://Sonidos/Casco_2.mp3"
+dest_files=[ "res://.import/Casco_2.mp3-11fcca11fbb0ca267f761cc2be3effdb.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

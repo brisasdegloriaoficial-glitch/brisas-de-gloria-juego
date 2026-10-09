@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/largada.ogg-9dd9d8852a97086518a5e1c647e49d0b.oggstr"
+
+[deps]
+
+source_file="res://Sonidos/largada.ogg"
+dest_files=[ "res://.import/largada.ogg-9dd9d8852a97086518a5e1c647e49d0b.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

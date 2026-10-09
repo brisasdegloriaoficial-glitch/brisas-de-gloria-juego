@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/Cascos.mp3-280c9ea83b89682e97ab2d424c4b7f91.mp3str"
+
+[deps]
+
+source_file="res://Sonidos/Cascos.mp3"
+dest_files=[ "res://.import/Cascos.mp3-280c9ea83b89682e97ab2d424c4b7f91.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

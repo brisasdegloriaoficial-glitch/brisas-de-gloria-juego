@@ -1,0 +1,81 @@
+[gd_scene load_steps=13 format=2]
+
+[ext_resource path="res://Caballos/Caballo_Arabe_01.glb" type="PackedScene" id=1]
+[ext_resource path="res://Caballos/Latigo_Jockey_02.glb" type="PackedScene" id=5]
+[ext_resource path="res://Caballos/Cincha_Arabe.glb" type="PackedScene" id=6]
+[ext_resource path="res://Caballos/Estribo_02.glb" type="PackedScene" id=7]
+[ext_resource path="res://Caballos/Brida_Arabe.glb" type="PackedScene" id=9]
+[ext_resource path="res://Caballos/Jinete_Sentado.glb" type="PackedScene" id=10]
+[ext_resource path="res://Caballos/Silla_Americano_Cuero.material" type="Material" id=11]
+[ext_resource path="res://Caballos/Silla_Arabe_Espejo_Silla_Arabe_Espejo.mesh" type="ArrayMesh" id=12]
+[ext_resource path="res://Caballos/Jockey_Tripo_250926.gd" type="Script" id=14]
+[ext_resource path="res://Caballos/Riendas.gd" type="Script" id=15]
+[ext_resource path="res://Caballos/Estribos.gd" type="Script" id=16]
+[ext_resource path="res://Caballos/Caballo_Arabe_01.gd" type="Script" id=18]
+
+[node name="Caballo_Arabe_Completo" type="Spatial"]
+
+[node name="Caballo_Arabe_01" parent="." instance=ExtResource( 1 )]
+process_priority = -1
+transform = Transform( 17.1996, -0.0572291, 0.0987538, 0.0960848, 15.2922, -7.87276, -0.0616051, 7.87314, 15.2922, 0, 0, 0 )
+script = ExtResource( 18 )
+alcance_delanteras = 45.0
+alcance_traseras = 45.0
+doblar_codo = 40.0
+doblar_rodilla_delantera = 110.0
+doblar_menudillo_delantero = 40.0
+doblar_babilla = 35.0
+doblar_corvejon = 70.0
+doblar_menudillo_trasero = 40.0
+tiempo_apoyo = 0.25
+bajar_cuerpo = 0.06
+
+[node name="BoneAttachment" parent="Caballo_Arabe_01/Armature/Skeleton" index="0"]
+transform = Transform( -0.0766966, -0.997054, 0.000226304, 0.99705, -0.0766968, -0.0029411, 0.0029498, 7.70134e-08, 0.999996, 0.0991127, 1.19122, 0.0030281 )
+
+[node name="tripo_86a61581_cf2c_408b_a89a_6ca6651d7480" parent="Caballo_Arabe_01/Armature/Skeleton/BoneAttachment" index="0"]
+transform = Transform( 0.0336517, 0.599335, -0.0612683, -0.799046, 0.0249103, -0.074577, -0.0198484, 0.0133101, 2.89839, -0.044946, 0.0113639, -0.00373048 )
+material_override = ExtResource( 11 )
+mesh = ExtResource( 12 )
+
+[node name="Jinete_Sentado2" parent="Caballo_Arabe_01/Armature/Skeleton/BoneAttachment" index="1" instance=ExtResource( 10 )]
+transform = Transform( -0.0766978, 1.47141, 0.373458, -0.0408248, -0.375798, 1.47225, 1.51752, 0.0642573, 0.058482, -0.33, 0.153, -0.025 )
+script = ExtResource( 14 )
+muslos_adelante = -60.0
+abrir_piernas = -5.0
+abrir_pantorrillas = -60.0
+doblar_rodillas = 110.0
+inclinar_cintura = -100.0
+inclinar_pecho_bajo = 0.0
+inclinar_pecho_alto = 0.0
+levantar_cuello = 40.0
+levantar_cabeza = 20.0
+brazos_adelante = -110.0
+doblar_codos = -70.0
+juntar_manos = 12.0
+latigo_modelo = ExtResource( 5 )
+latigo_giro = Vector3( -1, -47, 111 )
+color_casco = Color( 0.0392157, 0.0392157, 0.0392157, 1 )
+
+[node name="Estribos" type="Spatial" parent="Caballo_Arabe_01/Armature/Skeleton/BoneAttachment/Jinete_Sentado2"]
+script = ExtResource( 16 )
+modelo_estribo = ExtResource( 7 )
+planta_pie = Vector3( 0, 0, -0.01 )
+
+[node name="Riendas" type="Spatial" parent="Caballo_Arabe_01/Armature/Skeleton/BoneAttachment/Jinete_Sentado2"]
+script = ExtResource( 15 )
+ancho_rienda = 10.0
+grosor_rienda = 2.0
+distancia_detalle = 80.0
+estado = "listas"
+
+[node name="Cincha_Arabe" parent="Caballo_Arabe_01/Armature/Skeleton/BoneAttachment" index="2" instance=ExtResource( 6 )]
+
+[node name="BoneAttachment_Cabeza" type="BoneAttachment" parent="Caballo_Arabe_01/Armature/Skeleton" index="2"]
+transform = Transform( -0.193637, -0.981072, 0.0014663, 0.980983, -0.193639, -0.0132479, 0.013281, -0.0011268, 0.99991, -1.07243, 1.68447, 0.038412 )
+bone_name = "tripo__Head_5"
+
+[node name="Brida_Arabe" parent="Caballo_Arabe_01/Armature/Skeleton/BoneAttachment_Cabeza" instance=ExtResource( 9 )]
+transform = Transform( 1, 1.49012e-08, -1.86265e-09, -4.47035e-08, 1, -1.49012e-08, 7.45058e-09, -5.96046e-08, 1, -0.0011946, -0.0070802, 0.0124682 )
+
+[editable path="Caballo_Arabe_01"]

@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/Timbre_Hipodromo.ogg-1d216c022a3a7a47606905e4581a7bc1.oggstr"
+
+[deps]
+
+source_file="res://Sonidos/Timbre_Hipodromo.ogg"
+dest_files=[ "res://.import/Timbre_Hipodromo.ogg-1d216c022a3a7a47606905e4581a7bc1.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

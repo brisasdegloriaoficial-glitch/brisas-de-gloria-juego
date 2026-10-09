@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/Campanada_Grave.ogg-4b53cac0a36e84ddf9726a6e5b6506ae.oggstr"
+
+[deps]
+
+source_file="res://Sonidos/Campanada_Grave.ogg"
+dest_files=[ "res://.import/Campanada_Grave.ogg-4b53cac0a36e84ddf9726a6e5b6506ae.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

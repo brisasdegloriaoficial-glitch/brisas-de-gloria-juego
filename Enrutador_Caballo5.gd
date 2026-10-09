@@ -100,7 +100,7 @@ func _process(delta):
 			tiempo_hasta_cambio = rand_range(1.5, 3.5)
 		velocidad_actual = lerp(velocidad_actual, velocidad_objetivo, clamp(velocidad_suavizado * delta, 0.0, 1.0))
 
-	offset += _velocidad_con_peloton(delta) * delta
+	offset += _velocidad_con_peloton(delta) * delta * GestorNivel.obtener_factor_arranque(self)
 
 	_corregir_rumbo()
 
