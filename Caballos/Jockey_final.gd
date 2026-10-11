@@ -1,4 +1,5 @@
 extends Node
+# VERSION: el nivel solo cambia los ultimos 400 m de los rivales (tu caballo siempre al 100%) + ayuda tras 3 derrotas + JUGAR OTRA VEZ + NIVEL + META SUPERADA (9-oct-2026)
 
 export var duracion_efecto = 2.0
 export var penalizacion_proporcion_duracion = 0.5
@@ -377,7 +378,8 @@ func _ready():
 
 	# Velocidad de crucero del caballo, sin ningun empujon encima.
 	# Es la base sobre la que se calculan arreo, latigo y frenado.
-	_velocidad_base = enrutador.velocidad_avance
+	_velocidad_base = enrutador.velocidad_avance * _fuerza_del_jugador()
+	_factor_rivales = _factor_rivales_por_nivel()
 
 	if not label_velocidad:
 		# Respaldo: si el camino guardado en el Inspector
@@ -557,6 +559,100 @@ func _ajustar_panel_aviso():
 
 	if _panel_aviso:
 		_panel_aviso.visible = true
+	_mostrar_boton_otra_vez(esquina, Vector2(ancho, alto))
+
+
+# ------------------------------------------------------------
+# BOTON "JUGAR OTRA VEZ"
+# ------------------------------------------------------------
+# Aparece debajo del cartel de resultados al terminar la carrera.
+# Lleva a la pantalla de partida con la misma distancia, sin salir
+# del juego. El nivel y el avance del jugador se conservan.
+export var mostrar_boton_otra_vez = true
+export var texto_boton_otra_vez = "JUGAR OTRA VEZ"
+export var tamano_boton_otra_vez = Vector2(280, 64)
+export var tamano_letra_boton_otra_vez = 28
+export var separacion_boton_otra_vez = 14.0
+var _boton_otra_vez = null
+
+func _mostrar_boton_otra_vez(esquina_panel, tamano_panel):
+	if not mostrar_boton_otra_vez or _capa_aviso == null:
+		return
+	if _boton_otra_vez == null:
+		_boton_otra_vez = Button.new()
+		_boton_otra_vez.text = texto_boton_otra_vez
+		_boton_otra_vez.focus_mode = Control.FOCUS_NONE
+		_boton_otra_vez.pause_mode = Node.PAUSE_MODE_PROCESS
+		_boton_otra_vez.add_stylebox_override("normal", _estilo_panel_aviso())
+		_boton_otra_vez.add_stylebox_override("hover", _estilo_panel_aviso())
+		var apretado = _estilo_panel_aviso()
+		apretado.bg_color = color_panel_aviso.darkened(0.4)
+		_boton_otra_vez.add_stylebox_override("pressed", apretado)
+		_boton_otra_vez.add_color_override("font_color", color_aviso)
+		_boton_otra_vez.add_color_override("font_color_hover", color_aviso)
+		_boton_otra_vez.add_color_override("font_color_pressed", color_aviso)
+		_boton_otra_vez.connect("pressed", self, "_jugar_otra_vez")
+		_capa_aviso.add_child(_boton_otra_vez)
+		var base = _boton_otra_vez.get_font("font")
+		if base != null and base is DynamicFont and base.font_data != null:
+			var f = DynamicFont.new()
+			f.font_data = base.font_data
+			f.size = max(10, tamano_letra_boton_otra_vez)
+			if grosor_contorno_aviso > 0:
+				f.outline_size = grosor_contorno_aviso
+				f.outline_color = color_contorno_aviso
+			_boton_otra_vez.add_font_override("font", f)
+	# Si hay foto de llegada, el boton va debajo de la foto, centrado,
+	# y aparece junto con ella.
+	var panel_foto = null
+	var foto = get_tree().current_scene.get_node_or_null("FotoFinish")
+	if foto and ("_panel" in foto):
+		panel_foto = foto._panel
+	if panel_foto and is_instance_valid(panel_foto):
+		if _boton_otra_vez.get_parent() != panel_foto:
+			_boton_otra_vez.get_parent().remove_child(_boton_otra_vez)
+			panel_foto.add_child(_boton_otra_vez)
+		_boton_otra_vez.anchor_left = 0.5
+		_boton_otra_vez.anchor_right = 0.5
+		_boton_otra_vez.anchor_top = 1.0
+		_boton_otra_vez.anchor_bottom = 1.0
+		_boton_otra_vez.margin_left = -tamano_boton_otra_vez.x / 2.0
+		_boton_otra_vez.margin_right = tamano_boton_otra_vez.x / 2.0
+		_boton_otra_vez.margin_top = separacion_boton_otra_vez
+		_boton_otra_vez.margin_bottom = separacion_boton_otra_vez + tamano_boton_otra_vez.y
+		_boton_otra_vez.visible = true
+		return
+	# Sin foto: debajo del cartel de resultados.
+	var pantalla = get_viewport().get_visible_rect().size
+	var x = esquina_panel.x + (tamano_panel.x - tamano_boton_otra_vez.x) / 2.0
+	var y = esquina_panel.y + tamano_panel.y + separacion_boton_otra_vez
+	x = clamp(x, 8.0, max(8.0, pantalla.x - tamano_boton_otra_vez.x - 8.0))
+	y = clamp(y, 8.0, max(8.0, pantalla.y - tamano_boton_otra_vez.y - 8.0))
+	_colocar_control(_boton_otra_vez, Vector2(x, y), tamano_boton_otra_vez)
+	_boton_otra_vez.visible = true
+
+
+func _jugar_otra_vez():
+	# Deja una marca para que la carrera nueva arranque sola,
+	# sin pasar por la pantalla de PARTIDA.
+	get_tree().set_meta("jugar_otra_vez", true)
+	get_tree().paused = false
+	get_tree().call_deferred("reload_current_scene")
+
+
+func _enter_tree():
+	if get_tree().has_meta("jugar_otra_vez"):
+		get_tree().remove_meta("jugar_otra_vez")
+		call_deferred("_arrancar_carrera_de_una_vez")
+
+
+func _arrancar_carrera_de_una_vez():
+	var raiz = get_tree().current_scene
+	if raiz == null:
+		return
+	var pantalla = raiz.find_node("PantallaInicio", true, false)
+	if pantalla and pantalla.has_method("_iniciar_cuenta"):
+		pantalla._iniciar_cuenta()
 
 
 # Planta un control en un lugar y tamano exactos, sin anclas.
@@ -651,6 +747,9 @@ func _mostrar_aviso_final():
 
 	if _subio_de_nivel_este_aviso and GestorNivel:
 		texto += "\n\n¡SUBISTE A NIVEL %d!" % GestorNivel.nivel_actual
+	# Gano en el ultimo nivel: meta superada.
+	elif posicion_llegada == 1 and GestorNivel and GestorNivel.nivel_actual >= GestorNivel.nivel_maximo:
+		texto += "\n\n" + texto_meta_superada
 
 	# Si ganas, letras amarillas (color_aviso) aunque haya photo finish.
 	# El color de photo finish queda solo para cuando no ganas.
@@ -1337,6 +1436,8 @@ func _actualizar_ritmo_rivales():
 	var extra = 0.0
 	if GestorNivel.has_method("obtener_extra_velocidad_rivales"):
 		extra = GestorNivel.obtener_extra_velocidad_rivales()
+	if _en_largas:
+		extra *= extra_rivales_largas
 	# Centro del lote: el recorrido del caballo del medio (contandote a ti).
 	var recorridos = [GestorNivel.obtener_recorrido(enrutador)]
 	for c in _papeles.keys():
@@ -1366,8 +1467,9 @@ func _actualizar_ritmo_rivales():
 		var firmeza = _papeles[c][3]
 		var correccion = (centro + lugar - GestorNivel.obtener_recorrido(c)) * fuerza_de_formacion * firmeza
 		correccion = clamp(correccion, -correccion_maxima_formacion, correccion_maxima_formacion) * peso * entrada
-		var ahora = _velocidad_de_papel(papel, p) * forma + extra + correccion
-		var al_final = _velocidad_de_papel(papel, 1.0) * forma + extra
+		var factor_c = _factor_rivales_para(c)
+		var ahora = _velocidad_de_papel(papel, p) * forma * factor_c + extra + correccion
+		var al_final = _velocidad_de_papel(papel, 1.0) * forma * factor_c + extra
 		if ("velocidad_inicial" in c) and ("velocidad_final" in c):
 			c.velocidad_inicial = ahora
 			c.velocidad_final = al_final
@@ -1476,6 +1578,10 @@ func _crear_paneles_derecha():
 	_label_distancia = _crear_panel(caja)
 	_label_puesto = _crear_panel(caja)
 	_label_distancia.text = "DISTANCIA: " + _texto_distancia()
+	# NIVEL que se esta corriendo, debajo del puesto.
+	var label_nivel = _crear_panel(caja)
+	if GestorNivel:
+		label_nivel.text = "NIVEL: %d" % GestorNivel.nivel_actual
 	_actualizar_paneles_derecha()
 
 
@@ -1934,3 +2040,97 @@ func _desfasar_galopes():
 		if largo > 0.0:
 			anim.seek(randf() * largo, true)
 		_galope_desfasado[hijo] = true
+
+
+# Mensaje al ganar en el ultimo nivel (sale en el cartel de resultados).
+export var texto_meta_superada = "¡META SUPERADA EN LA PRE-ALFA!"
+
+
+# ------------------------------------------------------------
+# DIFICULTAD: LOS RIVALES CAMBIAN, TU CABALLO NO
+# ------------------------------------------------------------
+# Tu caballo nunca pierde cualidades al subir de nivel. Los que
+# cambian son los rivales, y solo en los ultimos metros (Metros Finales):
+# 1 = normal, 0.85 = llegan 15% mas cansados, 1.05 = rematan 5% mas
+# fuerte. La de 800 tiene los suyos.
+export var rivales_niveles_1_a_3 = 0.85
+export var rivales_niveles_4_a_6 = 0.92
+export var rivales_niveles_7_a_10 = 1.0
+export var rivales_800_niveles_1_a_3 = 0.85
+export var rivales_800_niveles_4_a_6 = 0.92
+export var rivales_800_niveles_7_a_10 = 1.0
+# Ayuda que no se nota: despues de perder tantas carreras seguidas,
+# la siguiente tu caballo corre un poco mas (1.06 = 6% mas), hasta
+# que vuelvas a ganar.
+export var derrotas_para_ayuda = 3
+export var ayuda_tras_derrotas = 1.06
+
+# REGLA: los caballos salen y corren siempre igual, cada uno con su papel
+# (punteros, rematadores, fondistas). El nivel SOLO cambia los ultimos
+# metros: al entrar en sus Metros Finales, cada rival se va cansando (o,
+# con un valor mayor que 1, se pone mas fuerte) hasta la meta.
+export var metros_finales = 400.0
+
+var _factor_rivales = 1.0
+
+func _factor_rivales_para(c) -> float:
+	if _factor_rivales == 1.0 or metros_finales <= 0.0 or GestorNivel == null:
+		return 1.0
+	var falta = GestorNivel.obtener_distancia_hasta_meta(c)
+	if falta < 0.0 or falta > metros_finales:
+		return 1.0
+	var peso = clamp(1.0 - falta / metros_finales, 0.0, 1.0)
+	return lerp(1.0, _factor_rivales, peso)
+
+
+func _factor_rivales_por_nivel() -> float:
+	if GestorNivel == null:
+		return 1.0
+	var nivel = GestorNivel.nivel_actual
+	var es_800 = ConfiguracionCarrera != null and ConfiguracionCarrera.modo_recta
+	var factor = 1.0
+	if nivel <= 3:
+		factor = rivales_800_niveles_1_a_3 if es_800 else rivales_niveles_1_a_3
+	elif nivel <= 6:
+		factor = rivales_800_niveles_4_a_6 if es_800 else rivales_niveles_4_a_6
+	else:
+		factor = rivales_800_niveles_7_a_10 if es_800 else rivales_niveles_7_a_10
+	_en_largas = _es_bloque_largas()
+	if _en_largas:
+		metros_finales = metros_finales_largas
+		if nivel <= 3:
+			factor = rivales_largas_niveles_1_a_3
+		elif nivel <= 6:
+			factor = rivales_largas_niveles_4_a_6
+		else:
+			factor = rivales_largas_niveles_7_a_10
+	if diagnostico_llegada:
+		print("[BDG-Jockey] Rivales al ", factor, " | nivel ", nivel, " | 800=", es_800)
+	return factor
+
+
+# Tu caballo: siempre al 100%. Solo recibe la ayuda tras varias derrotas.
+func _fuerza_del_jugador() -> float:
+	if GestorNivel == null:
+		return 1.0
+	var fuerza = 1.0
+	if ("derrotas_seguidas" in GestorNivel) and derrotas_para_ayuda > 0:
+		if GestorNivel.derrotas_seguidas >= derrotas_para_ayuda:
+			fuerza = ayuda_tras_derrotas
+	if diagnostico_llegada:
+		print("[BDG-Jockey] Fuerza de tu caballo: ", fuerza)
+	return fuerza
+
+# ------------------------------------------------------------
+# BLOQUE DE LARGAS (2000, 2400 y 3000 de grama)
+# ------------------------------------------------------------
+export var largas_desde_metros = 3000.0
+export var rivales_largas_niveles_1_a_3 = 0.85
+export var rivales_largas_niveles_4_a_6 = 0.92
+export var rivales_largas_niveles_7_a_10 = 1.0
+export var metros_finales_largas = 400.0
+export var extra_rivales_largas = 1.0
+var _en_largas = false
+
+func _es_bloque_largas() -> bool:
+	return ConfiguracionCarrera != null and not ConfiguracionCarrera.modo_recta and ConfiguracionCarrera.distancia_metros >= largas_desde_metros

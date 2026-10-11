@@ -1,11 +1,26 @@
 extends Node
 # VERSION: orden de llegada real del 2do en adelante (oct 2026)
+# + avance del jugador guardado POR DISTANCIA y derrotas seguidas (9-oct-2026)
 
 # ============================================================
 # GESTOR DE NIVEL, PELOTON, RECORRIDO Y VUELTAS
 # ============================================================
 
 export var nivel_actual = 1
+
+# AVANCE DEL JUGADOR - cada distancia tiene su propio avance (nivel e
+# historial), por separado: grama y arena tambien van aparte. Se guarda
+# en este equipo y se recupera al abrir el juego o al cambiar de
+# distancia. Cada telefono o computadora guarda el de su jugador.
+# PARA PROBAR LA DIFICULTAD: 0 = juega con el avance guardado (lo normal).
+# Del 1 al 10 = fuerza ese nivel, no sube al ganar y no toca lo guardado.
+export var nivel_de_prueba = 0
+const RUTA_PROGRESO = "user://progreso_bdg.cfg"
+var carreras_corridas = 0
+var carreras_ganadas = 0
+# Carreras perdidas una detras de otra. Al ganar vuelve a 0. Jockey_final
+# lo usa para darle una ayuda que no se nota despues de varias derrotas.
+var derrotas_seguidas = 0
 
 # --- Progresion de dificultad: sube 1 nivel (de 10) cada vez que el
 # jugador gano una carrera. Se queda igual si pierde.
@@ -18,7 +33,7 @@ export var nivel_maximo = 10
 export var curva_dificultad = 3.0
 
 export var estamina_nivel_1 = 100.0
-export var estamina_nivel_10 = 65.0
+export var estamina_nivel_10 = 100.0
 
 export var extra_velocidad_rivales_nivel_10 = 4.0
 
@@ -163,12 +178,112 @@ func reiniciar_carrera():
 
 # Sube un nivel (de 10) si el jugador gano (posicion 1), y se
 # queda en el mismo nivel si perdio. Se llama desde Jockey_final.gd
-# apenas se sabe la posicion de llegada del jugador.
+# apenas se sabe la posicion de llegada del jugador. Despues de cada
+# carrera se guarda el avance. En modo de prueba no sube ni guarda.
 func subir_nivel_si_gano(posicion_llegada):
-	if posicion_llegada == 1 and nivel_actual < nivel_maximo:
-		nivel_actual += 1
+	if nivel_de_prueba > 0:
 		if mostrar_diagnostico:
-			print("[BDG] Subio a nivel ", nivel_actual)
+			print("[BDG] Nivel de prueba ", nivel_actual, ": no sube ni se guarda")
+		return
+	carreras_corridas += 1
+	if posicion_llegada == 1:
+		carreras_ganadas += 1
+		derrotas_seguidas = 0
+		if nivel_actual < nivel_maximo:
+			nivel_actual += 1
+			if mostrar_diagnostico:
+				print("[BDG] Subio a nivel ", nivel_actual)
+	else:
+		derrotas_seguidas += 1
+		if mostrar_diagnostico:
+			print("[BDG] Derrotas seguidas: ", derrotas_seguidas)
+	_guardar_progreso()
+
+
+func _ready():
+	# Cada vez que entra una carrera nueva (al abrir el juego, al elegir
+	# distancia, REINICIAR o JUGAR OTRA VEZ) se carga el avance de esa
+	# distancia ANTES de que los caballos lean el nivel.
+	get_tree().connect("node_added", self, "_al_entrar_nodo")
+	cargar_progreso_de_distancia()
+
+
+func _al_entrar_nodo(nodo):
+	if nodo == get_tree().current_scene:
+		cargar_progreso_de_distancia()
+
+
+# Nombre con el que se guarda cada distancia: grama_800, grama_1600,
+# arena_764... (el numero es el valor interno de la distancia).
+func _clave_distancia() -> String:
+	var pista = "grama"
+	var valor = 1600.0
+	if ConfiguracionCarrera:
+		valor = float(ConfiguracionCarrera.distancia_metros)
+		if ConfiguracionCarrera.pista_arena:
+			pista = "arena"
+	return "%s_%d" % [pista, int(round(valor))]
+
+
+func cargar_progreso_de_distancia():
+	if nivel_de_prueba > 0:
+		nivel_actual = int(clamp(nivel_de_prueba, 1, nivel_maximo))
+		if mostrar_diagnostico:
+			print("[BDG] MODO PRUEBA: nivel ", nivel_actual)
+		return
+	var clave = _clave_distancia()
+	# Si no hay nada guardado de esta distancia, empieza de cero.
+	nivel_actual = 1
+	carreras_corridas = 0
+	carreras_ganadas = 0
+	derrotas_seguidas = 0
+	var archivo = ConfigFile.new()
+	if archivo.load(RUTA_PROGRESO) == OK:
+		_pasar_avance_viejo_a_800(archivo)
+		if archivo.has_section(clave):
+			nivel_actual = int(clamp(archivo.get_value(clave, "nivel", 1), 1, nivel_maximo))
+			carreras_corridas = int(archivo.get_value(clave, "carreras_corridas", 0))
+			carreras_ganadas = int(archivo.get_value(clave, "carreras_ganadas", 0))
+			derrotas_seguidas = int(archivo.get_value(clave, "derrotas_seguidas", 0))
+	if mostrar_diagnostico:
+		print("[BDG] Avance de ", clave, ": nivel ", nivel_actual,
+			" | corridas ", carreras_corridas, " | ganadas ", carreras_ganadas)
+
+
+# El avance que se guardo antes de separar por distancia era de la 800.
+func _pasar_avance_viejo_a_800(archivo):
+	if not archivo.has_section("jugador"):
+		return
+	if not archivo.has_section("grama_800"):
+		for llave in archivo.get_section_keys("jugador"):
+			archivo.set_value("grama_800", llave, archivo.get_value("jugador", llave))
+	archivo.erase_section("jugador")
+	archivo.save(RUTA_PROGRESO)
+
+
+func _guardar_progreso():
+	var clave = _clave_distancia()
+	var archivo = ConfigFile.new()
+	# Se lee primero, para no borrar el avance de las otras distancias.
+	archivo.load(RUTA_PROGRESO)
+	archivo.set_value(clave, "nivel", nivel_actual)
+	archivo.set_value(clave, "carreras_corridas", carreras_corridas)
+	archivo.set_value(clave, "carreras_ganadas", carreras_ganadas)
+	archivo.set_value(clave, "derrotas_seguidas", derrotas_seguidas)
+	archivo.save(RUTA_PROGRESO)
+	if mostrar_diagnostico:
+		print("[BDG] Avance guardado de ", clave, ": nivel ", nivel_actual)
+
+
+# Para el boton que borrara el avance (solo de la distancia elegida).
+func borrar_progreso_de_distancia():
+	var archivo = ConfigFile.new()
+	if archivo.load(RUTA_PROGRESO) == OK:
+		var clave = _clave_distancia()
+		if archivo.has_section(clave):
+			archivo.erase_section(clave)
+			archivo.save(RUTA_PROGRESO)
+	cargar_progreso_de_distancia()
 
 
 func registrar_longitud_pista(valor):

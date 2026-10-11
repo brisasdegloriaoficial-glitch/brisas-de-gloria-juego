@@ -42,7 +42,7 @@ var distancias = [
 	# 2400m: arranca en el mismo punto que 800m (offset ~56.0), que
 	# tiene mas recta libre antes de la curva que el punto de 1200m.
 	# 2 vueltas desde ahi. 1944.5 + 3334.799316 = 5279.299316
-	{"etiqueta": "2400m", "valor": 5279.299316, "arreo": 70, "estamina": 240},
+	{"etiqueta": "2400m", "valor": 5279.299316, "arreo": 70, "estamina": 150},
 	# 3000m: arranca en el mismo punto que 1200m (offset ~400.5),
 	# 3 vueltas desde ahi. 1600.0 + 2*3334.799316 = 8269.598632
 	{"etiqueta": "3000m", "valor": 8269.598632, "arreo": 80, "estamina": 300},
@@ -55,7 +55,7 @@ var distancias = [
 #   1100m -> media vuelta        (764.5)
 #   1900m -> vuelta y media      (764.5 + 1529 = 2293.5)
 var distancias_arena = [
-	{"etiqueta": "1100m", "valor": 764.5, "arreo": 60, "estamina": 120},
+	{"etiqueta": "1100m", "valor": 764.5, "arreo": 60, "estamina": 100},
 	{"etiqueta": "1900m", "valor": 2293.5, "arreo": 50, "estamina": 200},
 ]
 var botones = []

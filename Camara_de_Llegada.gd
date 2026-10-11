@@ -1,4 +1,5 @@
 extends Camera
+# VERSION: la 800 hace todo el recorrido (patas -> sube y se aleja) y sigue al primero (9-oct-2026)
 
 export(NodePath) var camino_pista_path
 export(NodePath) var jockey_path
@@ -67,7 +68,8 @@ export var fov_final = 30.0
 # Al final se queda con estos primeros lugares.
 export var cuantos_primeros = 3
 # En la carrera de 800 (la recta) se queda con estos primeros lugares.
-export var cuantos_primeros_800 = 3
+# 1 = se queda con el primero (el grupo se ve detras de el).
+export var cuantos_primeros_800 = 1
 # Que tan suave sigue el punto al que mira (mas bajo = mas suave).
 export var suavidad_mira = 3.0
 # 0 = termina frente al photo finish (perpendicular). Mas alto = termina
@@ -83,6 +85,18 @@ export var altura_mira_final = 4.0
 export var metros_inicio_salida = 400.0
 # Acercar la toma: 1 = como estaba, mas alto = mas cerca (1.5, 2...).
 export var zoom = 1.5
+# --- SOLO LA DE 800 ---
+# En la de 800 la camara entra en los ultimos metros. Aqui hace TODO su
+# recorrido en ese tramo: arranca a ras de las patas y va subiendo y
+# alejandose hasta su sitio final. Estos son los valores del final:
+# Acercar: 1 = normal, mas alto = mas cerca, mas bajo = mas lejos.
+export var zoom_800 = 1.0
+# Altura donde termina (mas alto = se ve mas el logo BDG).
+export var altura_final_800 = 50.0
+# De costado donde termina (118 = baranda exterior; mas alto = mas lejos).
+export var lateral_final_800 = 135.0
+# Altura del punto al que mira al final.
+export var altura_mira_final_800 = 16.0
 # Despues de que cruza el ganador, la camara sigue girando detras de
 # los primeros estos segundos antes de quedarse quieta.
 # Desmarcar = se congela en el instante del cruce, como antes.
@@ -92,6 +106,9 @@ export var segundos_despues_de_meta = 4.0
 # queda fija mirando derecho la raya del photo finish (perpendicular).
 # Los caballos que pasan, pasan. Desmarcar = sigue a los primeros.
 export var fija_en_la_meta = true
+# En la de 800 NO se queda fija mirando la raya: sigue al primero
+# hasta que cruza (los de 800 van muy abiertos y no salian en la toma).
+export var fija_en_la_meta_800 = false
 # Desde que parte del recorrido de la camara empieza a girar hacia la
 # raya (0 = desde el principio, 1 = recien al final). Mas bajo = se
 # fija antes.
@@ -187,9 +204,15 @@ var _offset_modelo = {}
 var _tiempo_despues_meta = 0.0
 var _aviso_cruce_hecho = false
 
+var _falta_al_activar = -1.0
+
 func _toma_de_frente(delta):
 	if not _rastreador or not GestorNivel:
 		return
+	var es_800 = GestorNivel.modo_recta
+	var lat_fin = lateral_final_800 if es_800 else lateral_final
+	var alto_fin = altura_final_800 if es_800 else altura_final
+	var mira_fin = altura_mira_final_800 if es_800 else altura_mira_final
 	var offset_meta = _obtener_offset_meta()
 	if offset_meta < 0.0:
 		return
@@ -199,9 +222,9 @@ func _toma_de_frente(delta):
 
 	# Cruzo el ganador.
 	if GestorNivel.obtener_ganador() != null:
-		var pos_final = _punto_de_pista(offset_meta + adelante_final, lateral_final, altura_final)
+		var pos_final = _punto_de_pista(offset_meta + adelante_final, lat_fin, alto_fin)
 		global_transform.origin = pos_final
-		fov = fov_final / max(zoom, 0.1)
+		fov = clamp(fov_final / max(_zoom_actual(), 0.1), 1.0, 179.0)
 		# Como antes: fija mirando derecho a la meta.
 		if not seguir_despues_de_meta:
 			# Se queda quieta en su sitio, mirando recto el punto fijo de
@@ -211,9 +234,9 @@ func _toma_de_frente(delta):
 			if _mira_fija == null:
 				var primeros_fin = _centro_corredores(_cuantos_primeros())
 				if primeros_fin != null:
-					_mira_fija = _raya_frente_a(primeros_fin) + Vector3.UP * altura_mira_final
+					_mira_fija = _raya_frente_a(primeros_fin) + Vector3.UP * mira_fin
 				else:
-					_mira_fija = _punto_de_pista(offset_meta, lateral_inicio, altura_mira_final)
+					_mira_fija = _punto_de_pista(offset_meta, lateral_inicio, mira_fin)
 			if _mira_suave == null:
 				_mira_suave = _mira_fija
 			else:
@@ -235,17 +258,25 @@ func _toma_de_frente(delta):
 			return
 		var primeros = _centro_corredores(_cuantos_primeros())
 		if primeros != null:
-			var mira_fin = primeros + Vector3.UP * altura_mira
+			var mira_despues = primeros + Vector3.UP * altura_mira
 			if _mira_suave == null:
-				_mira_suave = mira_fin
+				_mira_suave = mira_despues
 			else:
-				_mira_suave = _mira_suave.linear_interpolate(mira_fin, clamp(suavidad_mira * delta, 0.0, 1.0))
+				_mira_suave = _mira_suave.linear_interpolate(mira_despues, clamp(suavidad_mira * delta, 0.0, 1.0))
 			if global_transform.origin.distance_to(_mira_suave) > 0.5:
 				look_at(_mira_suave, Vector3.UP)
 		return
 
-	var tramo = max(metros_inicio_salida - distancia_para_plantarse, 1.0)
-	var t = clamp((metros_inicio_salida - falta) / tramo, 0.0, 1.0)
+	var inicio = metros_inicio_salida
+	var plantarse = distancia_para_plantarse
+	if es_800:
+		# En la de 800 el recorrido empieza donde se prendio la camara.
+		if _falta_al_activar < 0.0:
+			_falta_al_activar = max(falta, 1.0)
+		inicio = _falta_al_activar
+		plantarse = 0.0
+	var tramo = max(inicio - plantarse, 1.0)
+	var t = clamp((inicio - falta) / tramo, 0.0, 1.0)
 	t = t * t * (3.0 - 2.0 * t)
 
 	# Cuanto le falta a la camara para su sitio final. Va por delante
@@ -257,11 +288,11 @@ func _toma_de_frente(delta):
 		var d = falta - adelante_del_lider + margen
 		antes_de_meta = d * d / (4.0 * margen)
 	var offset_camara = offset_meta + adelante_final * t - antes_de_meta
-	var lateral = lerp(lateral_inicio, lateral_final, t)
-	var alto = lerp(altura_inicio, altura_final, t)
+	var lateral = lerp(lateral_inicio, lat_fin, t)
+	var alto = lerp(altura_inicio, alto_fin, t)
 	global_transform.origin = _punto_de_pista(offset_camara, lateral, alto)
 
-	fov = lerp(fov_inicio, fov_final, t) / max(zoom, 0.1)
+	fov = clamp(lerp(fov_inicio, fov_final, t) / max(_zoom_actual(), 0.1), 1.0, 179.0)
 
 	# Al empezar mira al centro de TODO el lote; poco a poco se va
 	# quedando con los primeros lugares.
@@ -271,14 +302,14 @@ func _toma_de_frente(delta):
 		var offset_lider = GestorNivel.obtener_offset_lider()
 		lote = _punto_de_pista(offset_lider, lateral_inicio, 0.0)
 		punteros = lote
-	var alto_mira = lerp(altura_mira, altura_mira_final, t)
+	var alto_mira = lerp(altura_mira, mira_fin, t)
 	var mira = lote.linear_interpolate(punteros, t) + Vector3.UP * alto_mira
-	if fija_en_la_meta:
+	if _fijar_en_la_meta():
 		# Cuando a los primeros les faltan Metros Para Fijar, se elige UNA
 		# sola vez el punto de la raya frente a donde vienen, y desde ahi
 		# la camara gira suave hasta quedar mirando recto ese punto fijo.
 		if _mira_fija == null and falta <= metros_para_fijar:
-			_mira_fija = _raya_frente_a(punteros) + Vector3.UP * altura_mira_final
+			_mira_fija = _raya_frente_a(punteros) + Vector3.UP * mira_fin
 		if _mira_fija != null:
 			var peso = clamp(1.0 - falta / max(metros_para_fijar, 0.01), 0.0, 1.0)
 			mira = mira.linear_interpolate(_mira_fija, peso)
@@ -316,6 +347,23 @@ func _cuantos_primeros() -> int:
 	if GestorNivel and GestorNivel.modo_recta:
 		return cuantos_primeros_800
 	return cuantos_primeros
+
+
+# Acercamiento: en la de 800 usa su propio numero.
+func _zoom_actual() -> float:
+	if GestorNivel and GestorNivel.modo_recta:
+		# 0 o negativo no sirven: se toma como 1 (normal).
+		if zoom_800 <= 0.0:
+			return 1.0
+		return zoom_800
+	return zoom
+
+
+# Fija en la raya o siguiendo al primero: en la de 800 usa su propio valor.
+func _fijar_en_la_meta() -> bool:
+	if GestorNivel and GestorNivel.modo_recta:
+		return fija_en_la_meta_800
+	return fija_en_la_meta
 
 
 # Centro de los caballos. cuantos = 0 -> todos; si no, los primeros N.

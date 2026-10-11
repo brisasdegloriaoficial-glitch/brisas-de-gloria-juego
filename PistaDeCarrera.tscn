@@ -17,7 +17,7 @@
 [ext_resource path="res://Enrutador_Caballo2.gd" type="Script" id=15]
 [ext_resource path="res://Caballos/Caballo.glb" type="PackedScene" id=16]
 [ext_resource path="res://Caballos/Jinete.glb" type="PackedScene" id=17]
-[ext_resource path="res://Arena_Rastrillada.png" type="Texture" id=18]
+[ext_resource path="res://Textura_PistaArena_Tierra.jpg" type="Texture" id=18]
 [ext_resource path="res://Camara_de_Llegada.gd" type="Script" id=19]
 [ext_resource path="res://linea_salida.png" type="Texture" id=20]
 [ext_resource path="res://linea_llegada.png" type="Texture" id=21]
@@ -33144,7 +33144,7 @@ tracks/28/keys = PoolRealArray( 0, 1, 0, 0, -4.76837e-07, -3.72529e-09, 7.45058e
 [sub_resource type="SpatialMaterial" id=6]
 albedo_color = Color( 0.858824, 0.831373, 0.752941, 1 )
 albedo_texture = ExtResource( 18 )
-uv1_scale = Vector3( 6, 6, 6 )
+uv1_scale = Vector3( 12, 12, 12 )
 
 [sub_resource type="ArrayMesh" id=14]
 custom_aabb = AABB( -529.86, -1, -330, 1059.93, 2, 660 )
@@ -33237,7 +33237,7 @@ offset_meta_recta = 650.0
 margen_inicio_vuelta_completa = 50.0
 
 [node name="Enrutador_Caballo1" type="PathFollow" parent="TrackPath"]
-transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 225.554, 0, -320.266 )
+transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 257.88, 0, -320.266 )
 offset = 170.0
 h_offset = 5.0
 rotation_mode = 1
@@ -33340,11 +33340,21 @@ autoplay = "ArmatureAction_Armature"
 
 [node name="Jockey" type="Node" parent="TrackPath/Enrutador_Caballo1"]
 script = ExtResource( 8 )
-tope_empujon = 1.7
+tope_empujon = 1.8
 suavidad_aceleracion = 1.0
-h_offset_minimo = 0.0
-ancho_del_caballo = 5.0
-segundos_antes_de_tabla = 4.0
+arreo_incremento = 1.0
+latigazo_incremento = 2.0
+rivales_niveles_1_a_3 = 0.75
+rivales_niveles_4_a_6 = 0.9
+rivales_niveles_7_a_10 = 0.95
+rivales_800_niveles_1_a_3 = 0.75
+rivales_800_niveles_4_a_6 = 0.85
+rivales_800_niveles_7_a_10 = 0.95
+metros_finales = 200.0
+rivales_largas_niveles_1_a_3 = 0.75
+rivales_largas_niveles_4_a_6 = 0.8
+rivales_largas_niveles_7_a_10 = 0.85
+extra_rivales_largas = 0.95
 
 [node name="SonidoCascos" type="AudioStreamPlayer" parent="TrackPath/Enrutador_Caballo1"]
 script = ExtResource( 44 )
@@ -33358,7 +33368,7 @@ script = ExtResource( 48 )
 transform = Transform( 0.252536, 0, -0.544266, 0, 0.6, 0, 0.544266, 0, 0.252536, -13.121, 9.693, -4.722 )
 
 [node name="Enrutador_Caballo8" type="PathFollow" parent="TrackPath"]
-transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 243.307, 0, -358.33 )
+transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 275.632, 0, -358.33 )
 offset = 170.0
 h_offset = 89.0
 script = ExtResource( 22 )
@@ -33406,7 +33416,7 @@ anims/Latigo_Mano_L = SubResource( 146 )
 anims/Latigo_mano_R = SubResource( 147 )
 
 [node name="Enrutador_Caballo9" type="PathFollow" parent="TrackPath"]
-transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 243.307, 0, -358.33 )
+transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 275.632, 0, -358.33 )
 offset = 170.0
 h_offset = 89.0
 script = ExtResource( 32 )
@@ -33454,7 +33464,7 @@ anims/Latigo_Mano_L = SubResource( 286 )
 anims/Latigo_mano_R = SubResource( 287 )
 
 [node name="Enrutador_Caballo10" type="PathFollow" parent="TrackPath"]
-transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 243.307, 0, -358.33 )
+transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 275.632, 0, -358.33 )
 offset = 170.0
 h_offset = 89.0
 script = ExtResource( 39 )
@@ -33502,7 +33512,7 @@ anims/Latigo_Mano_L = SubResource( 298 )
 anims/Latigo_mano_R = SubResource( 299 )
 
 [node name="Enrutador_Caballo11" type="PathFollow" parent="TrackPath"]
-transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 243.307, 0, -358.33 )
+transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 275.632, 0, -358.33 )
 offset = 170.0
 h_offset = 89.0
 script = ExtResource( 54 )
@@ -33551,7 +33561,7 @@ anims/Latigo_Mano_L = SubResource( 2233 )
 anims/Latigo_mano_R = SubResource( 2234 )
 
 [node name="Enrutador_Caballo12" type="PathFollow" parent="TrackPath"]
-transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 243.307, 0, -358.33 )
+transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 275.632, 0, -358.33 )
 offset = 170.0
 h_offset = 89.0
 script = ExtResource( 55 )
@@ -33600,7 +33610,7 @@ anims/Latigo_Mano_L = SubResource( 2245 )
 anims/Latigo_mano_R = SubResource( 2246 )
 
 [node name="Enrutador_Caballo7" type="PathFollow" parent="TrackPath"]
-transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 240.771, 0, -352.892 )
+transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 273.096, 0, -352.892 )
 offset = 170.0
 h_offset = 77.0
 script = ExtResource( 23 )
@@ -33649,7 +33659,7 @@ anims/Latigo_Mano_L = SubResource( 132 )
 anims/Latigo_mano_R = SubResource( 133 )
 
 [node name="Enrutador_Caballo6" type="PathFollow" parent="TrackPath"]
-transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 238.235, 0, -347.454 )
+transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 270.56, 0, -347.454 )
 offset = 170.0
 h_offset = 65.0
 script = ExtResource( 24 )
@@ -33697,7 +33707,7 @@ anims/Latigo_Mano_L = SubResource( 118 )
 anims/Latigo_mano_R = SubResource( 119 )
 
 [node name="Enrutador_Caballo5" type="PathFollow" parent="TrackPath"]
-transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 235.699, 0, -342.016 )
+transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 268.024, 0, -342.016 )
 offset = 170.0
 h_offset = 53.0
 script = ExtResource( 25 )
@@ -33745,7 +33755,7 @@ anims/Latigo_Mano_L = SubResource( 102 )
 anims/Latigo_mano_R = SubResource( 103 )
 
 [node name="Enrutador_Caballo4" type="PathFollow" parent="TrackPath"]
-transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 233.163, 0, -336.579 )
+transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 265.488, 0, -336.579 )
 offset = 170.0
 h_offset = 41.0
 script = ExtResource( 26 )
@@ -33793,7 +33803,7 @@ anims/Latigo_Mano_L = SubResource( 83 )
 anims/Latigo_mano_R = SubResource( 84 )
 
 [node name="Enrutador_Caballo3" type="PathFollow" parent="TrackPath"]
-transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 230.627, 0, -331.141 )
+transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 262.952, 0, -331.141 )
 offset = 170.0
 h_offset = 29.0
 script = ExtResource( 14 )
@@ -33842,7 +33852,7 @@ anims/Latigo_Mano_L = SubResource( 43 )
 anims/Latigo_mano_R = SubResource( 44 )
 
 [node name="Enrutador_Caballo2" type="PathFollow" parent="TrackPath"]
-transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 228.09, 0, -325.703 )
+transform = Transform( 0.211337, 0, 0.453141, 0, 0.5, 0, -0.453141, 0, 0.211337, 260.416, 0, -325.703 )
 offset = 170.0
 h_offset = 17.0
 script = ExtResource( 15 )
@@ -33890,7 +33900,7 @@ anims/Latigo_Mano_L = SubResource( 28 )
 anims/Latigo_mano_R = SubResource( 29 )
 
 [node name="Aparato_Partida" type="PathFollow" parent="TrackPath"]
-transform = Transform( -0.00645773, -3.74712e-10, 0.999979, -0.00928483, 0.999957, -5.99597e-05, -0.999936, -0.00928502, -0.00645745, 223.981, -0.742786, -397.995 )
+transform = Transform( -0.00645773, -3.74712e-10, 0.999979, -0.00928483, 0.999957, -5.99597e-05, -0.999936, -0.00928502, -0.00645745, 256.306, -0.742786, -397.995 )
 offset = 170.0
 h_offset = 80.0
 script = ExtResource( 12 )
@@ -33917,9 +33927,10 @@ color_conteo = Color( 0.223529, 1, 0.0784314, 1 )
 [node name="SonidoLargada" type="AudioStreamPlayer" parent="TrackPath/Aparato_Partida/Gate"]
 volume_db = 20.0
 script = ExtResource( 49 )
+lista_musicas = [ "", "res://Sonidos/Beneath_the_Bit.ogg", "res://Sonidos/musica_carrera.ogg", "res://Sonidos/The_Final_Straight.ogg", "res://Sonidos/Thunder_at_the_Wire_1.ogg", "res://Sonidos/Thunder_on_the_Turf.ogg" ]
 
 [node name="JuezPartida" type="Spatial" parent="TrackPath/Aparato_Partida"]
-transform = Transform( -0.605147, -0.00928483, -0.79606, -0.0055712, 0.999957, -0.00742788, 0.796094, -5.99598e-05, -0.605173, -86.9196, -0.0649951, -12.4203 )
+transform = Transform( -0.605147, -0.00928483, -0.79606, -0.0055712, 0.999957, -0.00742788, 0.796094, -5.99598e-05, -0.605173, -86.7109, -0.0649951, -44.7449 )
 script = ExtResource( 42 )
 altura_plataforma = 5.0
 ancho_plataforma = 4.0
@@ -33932,7 +33943,7 @@ transform = Transform( -6.7, 0, -5.85733e-07, 0, 6.7, 0, 5.85733e-07, 0, -6.7, 0
 script = ExtResource( 69 )
 
 [node name="Meta_LLegada" type="PathFollow" parent="TrackPath"]
-transform = Transform( -0.337537, -0.165423, -1.45214, -0.0508563, 1.49079, -0.158005, 1.46064, 0.0136784, -0.341073, 245.122, -4.0685, 434.851 )
+transform = Transform( -0.337537, -0.165423, -1.45214, -0.0508563, 1.49079, -0.158005, 1.46064, 0.0136784, -0.341073, -173.424, -4.0685, 434.851 )
 visible = false
 offset = 2203.0
 h_offset = 80.0
@@ -33979,12 +33990,6 @@ suavidad_zoom = 4.0
 fov = 25.0
 far = 1500.0
 script = ExtResource( 19 )
-adelante_del_lider = 10.0
-altura_inicio = 0.6
-altura_final = 40.0
-altura_mira_final = 16.0
-metros_inicio_salida = 300.0
-margen_primero = 0.8
 
 [node name="Tribuna_Meta_Centro" type="CSGBox" parent="."]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 160.321, 0, 452.852 )
@@ -34155,7 +34160,7 @@ demora_despues_del_aviso = 3.5
 congelar_antes_de_la_raya = 12.5
 usar_prediccion = false
 voltear_imagen = true
-ancho_relativo = 0.6
+ancho_relativo = 0.7
 mostrar_raya = false
 mostrar_titulo = false
 mostrar_orden = false
@@ -34238,7 +34243,10 @@ separacion_postes_tubo = 20.0
 
 [node name="ArenitaCascos" type="Spatial" parent="."]
 script = ExtResource( 70 )
-color_arena = Color( 0.603922, 0.415686, 0.227451, 1 )
+cantidad = 72
+duracion = 0.6
+tamano = 0.1
+color_arena = Color( 0.690196, 0.584314, 0.454902, 1 )
 altura_suelo = 1.18
 
 [node name="MusicaPrevia" type="AudioStreamPlayer" parent="."]

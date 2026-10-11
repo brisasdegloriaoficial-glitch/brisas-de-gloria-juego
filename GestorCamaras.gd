@@ -1,4 +1,5 @@
 extends Spatial
+# VERSION: la 800 sin la primera persona PP_1 (9-oct-2026)
 
 export(NodePath) var camara_partida_path
 export(NodePath) var camara_aerea_path
@@ -29,7 +30,8 @@ export var metros_por_camara = 200.0
 # La aerea queda fuera de la rueda hasta nuevo aviso.
 export var usar_camara_aerea = false
 # En la de 800 va en orden fijo, segun los metros que llevas:
-# partida -> primera persona -> sobre el jinete -> llegada.
+# partida -> lateral externa -> sobre el jinete (PP_2) -> llegada.
+# (Metros Primera Persona 800 ahora son los metros de la lateral externa.)
 export var metros_partida_800 = 200.0
 export var metros_primera_persona_800 = 200.0
 export var metros_sobre_jinete_800 = 200.0
@@ -80,6 +82,8 @@ func _ready():
 	var externa = null
 	if camara_externa_path:
 		externa = get_node_or_null(camara_externa_path)
+	if externa == null and enrutador_jugador:
+		externa = enrutador_jugador.get_node_or_null("CamaraJugador_LateralD")
 	var aerea = null
 	if camara_aerea_path:
 		aerea = get_node_or_null(camara_aerea_path)
@@ -89,14 +93,17 @@ func _ready():
 			rueda.append(c)
 	if usar_camara_aerea and aerea:
 		rueda.append(aerea)
-	for c in [primera, sobre_jinete]:
+	# En la de 800 va la lateral externa en lugar de la primera persona.
+	var segunda_800 = externa if externa else primera
+	for c in [segunda_800, sobre_jinete]:
 		if c:
 			rueda_800.append(c)
-	_camara_primera = primera
+	_camara_primera = segunda_800
 	_camara_sobre_jinete = sobre_jinete
 	print("[BDG-Camaras] partida=", _nombre(camara_partida), " | primera=", _nombre(primera),
 		" | sobre jinete=", _nombre(sobre_jinete), " | externa=", _nombre(externa),
-		" | llegada=", _nombre(get_node_or_null(camara_llegada_path)))
+		" | llegada=", _nombre(get_node_or_null(camara_llegada_path)),
+		" | en la 800: partida -> ", _nombre(segunda_800), " -> ", _nombre(sobre_jinete), " -> llegada")
 
 	if camara_partida:
 		_activar_camara(camara_partida)
