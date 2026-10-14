@@ -38,8 +38,12 @@ mecer_cola = 6.0
 trancos_crucero = 1.7
 trancos_tope = 2.2
 
+[node name="Skeleton" parent="Caballo_Ingles_01/RootNode/Armature" index="0"]
+bones/3/bound_children = [ NodePath("BoneAttachment") ]
+bones/9/bound_children = [ NodePath("BoneAttachment_Cabeza") ]
+
 [node name="BoneAttachment" type="BoneAttachment" parent="Caballo_Ingles_01/RootNode/Armature/Skeleton" index="1"]
-transform = Transform( -0.480541, -0.730246, 0.485614, 0.824472, -0.564902, -0.0336167, 0.298873, 0.384221, 0.873527, -0.0297827, 0.738184, -0.0956861 )
+transform = Transform( -0.480541, -0.730246, 0.485614, 0.824472, -0.564902, -0.0336167, 0.298873, 0.384221, 0.873527, -0.0297827, 0.741353, -0.0956861 )
 bone_name = "tripo__Spine_2"
 
 [node name="Silla_Americano" parent="Caballo_Ingles_01/RootNode/Armature/Skeleton/BoneAttachment" instance=ExtResource( 10 )]
@@ -66,6 +70,11 @@ brazos_adelante = -120.0
 doblar_codos = -55.0
 juntar_manos = 6.0
 vaiven_cuerpo = 4.5
+metros_castigo = 250.0
+latigo_cada_segundos_final = 1.1
+castigo_empieza_minimo = 250.0
+castigo_menos_seguido = 1.0
+latigo_golpes = 3
 latigo_duracion_golpe = 0.7
 latigo_arriba_brazo = Vector3( 0, 0, -120 )
 latigo_modelo = ExtResource( 7 )
@@ -89,7 +98,7 @@ caballo = "ingles"
 estado = "listas"
 
 [node name="BoneAttachment_Cabeza" type="BoneAttachment" parent="Caballo_Ingles_01/RootNode/Armature/Skeleton" index="2"]
-transform = Transform( -0.0584238, -0.813358, 0.578822, 0.998261, -0.0521404, 0.0274927, 0.00781868, 0.579422, 0.814991, -0.429017, 0.731939, 0.162713 )
+transform = Transform( -0.0266762, -0.814565, 0.579458, 0.999637, -0.0238074, 0.0125531, 0.00357006, 0.579583, 0.814905, -0.430512, 0.738815, 0.162913 )
 bone_name = "tripo__Head_1"
 
 [node name="Brida_Americano" parent="Caballo_Ingles_01/RootNode/Armature/Skeleton/BoneAttachment_Cabeza" instance=ExtResource( 9 )]

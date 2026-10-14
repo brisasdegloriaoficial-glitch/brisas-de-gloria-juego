@@ -47,8 +47,23 @@ export var latigo_cada_segundos := 6.0
 export var latigo_variacion := 0.5    # 0.5 = cada jinete fustiga al azar entre la mitad y vez y media de ese tiempo
 export var castigar_solo_al_final := true     # los rivales castigan solo en los ultimos metros (antes, solo arrean)
 export var metros_castigo := 400.0            # desde cuantos metros antes de la meta empiezan a castigar
-export var latigo_cada_segundos_final := 1.6  # en el final castigan mucho mas seguido
-export var latigo_golpes := 2
+export var latigo_cada_segundos_final := 1.8  # en el final castigan mas seguido (pausa entre series)
+export var castigo_empieza_minimo := 150.0    # el que mas tarde empieza a castigar, a cuantos metros de la meta
+export var castigo_menos_seguido := 2.5       # el que menos castiga deja hasta 2.5 veces mas pausa
+export var latigo_golpes := 2                 # maximo de latigazos seguidos (cada rival da de 1 a este numero)
+export var mostrar_metros_en_consola := false # para revisar: escribe abajo cuantos metros le faltan a cada uno
+
+# ---------- ARREO (empujar con las manos, sin latigo) ----------
+export var arreo_automatico := true        # los rivales arrean solos
+export var arreo_brazos := 28.0            # cuanto empujan los brazos hacia adelante (negativo = al reves)
+export var arreo_codos := 18.0             # cuanto estiran los codos al empujar (negativo = al reves)
+export var arreo_cuerpo := 6.0             # cuanto bombea el cuerpo (negativo = al reves)
+export var arreo_suavidad := 3.0           # rapidez para entrar y salir del arreo
+export var arreo_durante_carrera := true   # antes de los ultimos metros arrean a ratos (sin latigo)
+export var arreo_cada_segundos := 8.0      # cada cuanto arrea un rato (al azar)
+export var arreo_dura_segundos := 2.5      # cuanto dura cada rato (al azar)
+export var arreo_fuerza_carrera := 0.6     # 1 = arreo completo; en carrera algo menos que en el final
+export var desfasar_galope := true         # cada jinete se mueve a su ritmo (sin nado sincronizado)
 export var latigo_duracion_golpe := 0.45
 # Cada golpe: 1) sube el brazo adelante y arriba, 2) lo baja en diagonal
 # pasando por el medio (al lado de la cadera), 3) pega atras abajo, en el anca,
@@ -74,6 +89,20 @@ var _latigo_activo := false
 var _latigo_tiempo := 0.0
 var _muneca := 0.0
 var _fase_latigo := 0.0
+var _golpes_ahora := 2
+var _es_jugador := false
+var _factor_castigo := 1.0
+var _metros_empieza := 400.0
+var _arreo := 0.0
+var _t_arreo := 0.0
+var _proximo_arreo := 8.0
+var _dura_arreo := 2.5
+var _arreando_rato := false
+var _metros := -1.0
+var _t_metros := 0.0
+var _ultimo_offset := 0.0
+var _en_movimiento := false
+var _termino := false
 
 var _rest := []      # reposo de cada hueso
 var _padre := []     # padre de cada hueso
@@ -93,6 +122,16 @@ func _ready():
 	# fustiguen todos al mismo tiempo.
 	_t_latigo = randf() * latigo_cada_segundos
 	_proximo_latigo = _tiempo_al_azar()
+	# Cada rival castiga a su manera: uno empieza antes, otro despues;
+	# uno castiga seguido, otro deja mas pausa.
+	_es_jugador = _es_del_jugador()
+	_metros_empieza = metros_castigo
+	if not Engine.editor_hint and not _es_jugador:
+		_factor_castigo = rand_range(1.0, max(castigo_menos_seguido, 1.0))
+		_metros_empieza = rand_range(min(castigo_empieza_minimo, metros_castigo), metros_castigo)
+		_proximo_arreo = arreo_cada_segundos * rand_range(0.3, 1.5)
+	if desfasar_galope:
+		_t = randf() * 10.0
 	_esq = _buscar_esqueleto(self)
 	if _esq == null:
 		push_warning("Jinete_Jockey: no encontré el esqueleto.")
@@ -122,61 +161,107 @@ func _ready():
 			_h[lado + p] = _hueso(lado + p)
 
 
-func latigazo():
+func latigazo(golpes := 0):
 	_latigo_activo = true
 	_latigo_tiempo = 0.0
+	_golpes_ahora = golpes if golpes > 0 else latigo_golpes
 
 
 func _tiempo_al_azar() -> float:
 	var v : float = clamp(latigo_variacion, 0.0, 0.9)
 	var base : float = latigo_cada_segundos
 	if _estaba_en_final:
-		base = latigo_cada_segundos_final
+		base = latigo_cada_segundos_final * _factor_castigo
 	return base * rand_range(1.0 - v, 1.0 + v)
 
 
-# True cuando a este caballo le faltan menos de metros_castigo para la
-# meta, en la ultima vuelta. Lo mide GestorNivel, igual que el juez.
+# Cuantos metros le faltan a este caballo para la meta (ultima vuelta).
+# Lo mide GestorNivel, igual que el juez. Se revisa 5 veces por segundo,
+# no en cada cuadro, para no cargar la laptop.
 var _estaba_en_final := false
-func _en_los_ultimos_metros() -> bool:
-	if Engine.editor_hint or GestorNivel == null:
-		return false
+func _revisar_metros(delta):
+	_t_metros += delta
+	if _t_metros < 0.2:
+		return
+	var paso := _t_metros
+	_t_metros = 0.0
+	if Engine.editor_hint:
+		return
 	_adelante_caballo()   # deja guardado el enrutador de este caballo
 	if _enrutador_cache == null:
-		return false
-	var d = GestorNivel.obtener_distancia_hasta_meta(_enrutador_cache)
-	return d >= 0.0 and d <= metros_castigo
+		_metros = -1.0
+		return
+	var off : float = _enrutador_cache.offset
+	_en_movimiento = abs(off - _ultimo_offset) / paso > 2.0
+	_ultimo_offset = off
+	if GestorNivel == null or not GestorNivel.has_method("obtener_distancia_hasta_meta"):
+		_metros = -1.0
+		return
+	_metros = GestorNivel.obtener_distancia_hasta_meta(_enrutador_cache)
+	if mostrar_metros_en_consola:
+		print(_enrutador_cache.name, ": faltan ", int(_metros), " m")
 
 
 func _process(delta):
 	if not activo or _esq == null or _b0.empty():
 		return
 	_t += delta
+	_revisar_metros(delta)
+
+	var en_final : bool = _metros >= 0.0 and _metros <= metros_castigo
+	if _estaba_en_final and not en_final:
+		_termino = false   # desactivado: al pasar la raya antes del final se apagaba el castigo
+	if en_final and not _estaba_en_final:
+		# Al entrar a los ultimos metros cada uno arranca en un momento distinto.
+		_t_latigo = 0.0
+		_proximo_latigo = rand_range(0.1, 1.5)
+	_estaba_en_final = en_final
 
 	if latigo_automatico and not _latigo_activo:
-		var en_final := _en_los_ultimos_metros()
-		if en_final and not _estaba_en_final:
-			# Al entrar a los ultimos metros cada uno arranca a castigar
-			# en un momento distinto (no todos a la vez).
-			_t_latigo = 0.0
-			_proximo_latigo = rand_range(0.1, 1.5)
-		_estaba_en_final = en_final
-		if castigar_solo_al_final and not en_final:
+		var puede := not _termino
+		if castigar_solo_al_final:
+			puede = puede and en_final and _metros <= _metros_empieza
+		if not puede:
 			_t_latigo = 0.0
 		else:
 			_t_latigo += delta
 			if _t_latigo >= _proximo_latigo:
 				_t_latigo = 0.0
 				_proximo_latigo = _tiempo_al_azar()
-				latigazo()
+				if _es_jugador:
+					latigazo()
+				else:
+					latigazo(1 + randi() % int(max(latigo_golpes, 1)))
+
+	# Arreo: en el final arrean siempre (entre latigazo y latigazo);
+	# antes, solo a ratos y al azar. Tu jinete no arrea solo.
+	var meta_arreo := 0.0
+	if arreo_automatico and not _es_jugador and not _termino and not Engine.editor_hint:
+		if en_final:
+			meta_arreo = 1.0
+		elif arreo_durante_carrera and _en_movimiento:
+			_t_arreo += delta
+			if _arreando_rato:
+				meta_arreo = arreo_fuerza_carrera
+				if _t_arreo >= _dura_arreo:
+					_arreando_rato = false
+					_t_arreo = 0.0
+					_proximo_arreo = arreo_cada_segundos * rand_range(0.5, 1.5)
+			elif _t_arreo >= _proximo_arreo:
+				_arreando_rato = true
+				_t_arreo = 0.0
+				_dura_arreo = arreo_dura_segundos * rand_range(0.6, 1.4)
+	_arreo = move_toward(_arreo, meta_arreo, delta * arreo_suavidad)
 
 	var fase := sin(_t * trancos_por_segundo * TAU)
+	# Empuje del arreo, un poquito adelantado al tranco
+	var fa : float = sin(_t * trancos_por_segundo * TAU + 0.6) * _arreo
 
 	# Latigazo: 0 = riendas, 1 = brazo atrás
 	var golpe := 0.0
 	if _latigo_activo:
 		_latigo_tiempo += delta
-		var total := latigo_duracion_golpe * latigo_golpes
+		var total := latigo_duracion_golpe * _golpes_ahora
 		if _latigo_tiempo >= total:
 			_latigo_activo = false
 		else:
@@ -192,10 +277,10 @@ func _process(delta):
 	_mover("Hips", Vector3(0, fase * rebote_cadera, 0))
 
 	# Cuerpo y cabeza (se doblan solo hacia adelante)
-	_centro("Spine", Vector3(0, 0, inclinar_cintura + fase * vaiven_cuerpo))
-	_centro("Spine1", Vector3(0, 0, inclinar_pecho_bajo))
+	_centro("Spine", Vector3(0, 0, inclinar_cintura + fase * vaiven_cuerpo - fa * arreo_cuerpo))
+	_centro("Spine1", Vector3(0, 0, inclinar_pecho_bajo - fa * arreo_cuerpo * 0.5))
 	_centro("Spine2", Vector3(0, 0, inclinar_pecho_alto))
-	_centro("Neck", Vector3(0, 0, levantar_cuello - fase * vaiven_cuerpo))
+	_centro("Neck", Vector3(0, 0, levantar_cuello - fase * vaiven_cuerpo + fa * arreo_cuerpo * 1.5))
 	_centro("Head", Vector3(0, 0, levantar_cabeza))
 
 	# Pierna izquierda (la derecha la copia en espejo)
@@ -213,8 +298,8 @@ func _process(delta):
 		_fijar("LeftFoot", (_base_padre(ip).inverse() * giro_pie * _b0[ip]).scaled(Vector3.ONE * tamano_pies))
 
 	# Brazo derecho (el izquierdo lo copia en espejo)
-	var brazo := brazos_adelante + fase * empuje_brazos
-	var codo := doblar_codos - fase * empuje_brazos * 0.5
+	var brazo := brazos_adelante + fase * empuje_brazos - fa * arreo_brazos
+	var codo := doblar_codos - fase * empuje_brazos * 0.5 + fa * arreo_codos
 	_fijar("RightArm", _giro(Vector3(-juntar_manos, 0, brazo)))
 	_fijar("RightForeArm", _giro(Vector3(0, 0, codo)))
 	for d in _DEDOS:

@@ -1315,7 +1315,47 @@ func _contar_caballos(camino):
 	return n
 
 
+# ------------------------------------------------------------
+# PAPELES POR RAZA (en todas las carreras)
+# ------------------------------------------------------------
+# A LA PUNTA: los Cuarto de Milla, mas un arabe y un americano.
+# REMATAN: el patilargo (el Ingles), mas un arabe y un americano.
+# Los demas: fondistas (ritmo parejo, en el medio del lote).
+export var cuartos_a_la_punta = 2
+export var arabes_a_la_punta = 1
+export var americanos_a_la_punta = 1
+export var arabes_rematadores = 1
+export var americanos_rematadores = 1
+# Ventaja minima que buscan los de punta sobre el centro del lote (medida
+# para la de 1600; un cuerpo es mas o menos 9). Mas alto = mas escapados.
+export var ventaja_cuartomilla = 27.0
+export var ventaja_otros_punteros = 18.0
+# DUELO DEL PATILARGO: en los ultimos metros sale a buscar al rival que va
+# adelante y llegan peleando cabeza a cabeza. A ti no te busca: si corres
+# bien, les ganas a los dos.
+export var duelo_patilargo = true
+export var probabilidad_duelo = 0.9        # 0.9 = en 9 de cada 10 carreras
+export var metros_duelo = 400.0            # desde cuantos metros antes de la meta lo busca
+export var diferencia_final_cuerpos = 0.5  # llega entre medio cuerpo atras y medio adelante
+export var tope_remate_patilargo = 36.0    # lo mas rapido que puede ir (tu caballo a fondo: 36)
+export var suavidad_duelo = 2.0            # mas alto = cambia de ritmo mas rapido
+export var vista_rematadores = 40.0        # cuantos metros adelante miran los que rematan para buscar hueco
+var _estilos_diferidos = false
+var _raza = {}
+var _patilargo = null
+var _rematan = []
+var _hay_duelo = false
+var _margen_duelo = 0.0
+var _vel_duelo = -1.0
+var _rec_previo = {}
+var _vel_medida = {}
+
 func _aplicar_estilos(camino):
+	# Espera un instante a que RepartidorCaballos ponga las razas.
+	if not _estilos_diferidos:
+		_estilos_diferidos = true
+		call_deferred("_aplicar_estilos", camino)
+		return
 	var rivales = []
 	# Todos los rivales que haya (antes se cortaba en el 10).
 	for n in range(2, _contar_caballos(camino) + 1):
@@ -1330,29 +1370,106 @@ func _aplicar_estilos(camino):
 	while lugares.size() < rivales.size():
 		lugares.append(extras[k_extra % extras.size()].duplicate())
 		k_extra += 1
-	if estilos_al_azar:
-		lugares.shuffle()
+	# Lugares de la formacion, del de mas adelante al de mas atras.
+	lugares.shuffle()
+	lugares.sort_custom(self, "_lugar_mayor")
+	# Cada rival segun su raza.
+	_raza.clear()
+	var por_raza = {"cuartomilla": [], "arabe": [], "americano": [], "patilargo": [], "otro": []}
+	for c in rivales:
+		var r = _raza_de(c)
+		_raza[c] = r
+		por_raza[r].append(c)
+	for r in por_raza.keys():
+		por_raza[r].shuffle()
+	var punta = []
+	punta += _tomar(por_raza["cuartomilla"], cuartos_a_la_punta)
+	punta += _tomar(por_raza["arabe"], arabes_a_la_punta)
+	punta += _tomar(por_raza["americano"], americanos_a_la_punta)
+	var remate = []
+	_patilargo = null
+	if por_raza["patilargo"].size() > 0:
+		_patilargo = por_raza["patilargo"][0]
+	remate += _tomar(por_raza["patilargo"], por_raza["patilargo"].size())
+	remate += _tomar(por_raza["arabe"], arabes_rematadores)
+	remate += _tomar(por_raza["americano"], americanos_rematadores)
+	_rematan = remate.duplicate()
+	var fondistas = []
+	for c in rivales:
+		if not punta.has(c) and not remate.has(c):
+			fondistas.append(c)
+	fondistas.shuffle()
+	# Los de punta adelante, los que rematan atras, los fondistas en el medio.
+	var lugar_de = {}
+	for i in range(punta.size()):
+		lugar_de[punta[i]] = i
+	var atras = []
+	for i in range(remate.size()):
+		atras.append(lugares.size() - 1 - i)
+	atras.shuffle()
+	for i in range(remate.size()):
+		lugar_de[remate[i]] = atras[i]
+	var j_libre = punta.size()
+	for c in fondistas:
+		lugar_de[c] = j_libre
+		j_libre += 1
+	# Forma del dia: las mejores para los Cuarto de Milla de punta y el
+	# patilargo; luego los demas de punta y los que rematan; el resto a
+	# los fondistas.
+	var formas = _repartir_formas(rivales.size())
+	formas.sort()
+	formas.invert()
+	var forma_de = {}
+	var preferidos = []
+	for c in punta:
+		if _raza[c] == "cuartomilla":
+			preferidos.append(c)
+	if _patilargo != null:
+		preferidos.append(_patilargo)
+	var segundos = []
+	for c in punta + remate:
+		if not preferidos.has(c):
+			segundos.append(c)
+	segundos.shuffle()
+	for c in preferidos + segundos + fondistas:
+		forma_de[c] = formas.pop_front() if formas.size() > 0 else 1.0
 	# Mano a mano: uno de los dos aguanta siempre; el otro a veces se cansa
 	# (y a veces aguanta tambien y llegan cabeza a cabeza).
 	var los_dos_aguantan = randf() < 0.35
 	var duelistas = 0
 	_papeles.clear()
-	var formas = _repartir_formas(min(rivales.size(), lugares.size()))
-	for i in range(min(rivales.size(), lugares.size())):
-		var papel = lugares[i][0]
-		var lugar = float(lugares[i][1])
-		var forma = formas[i] if i < formas.size() else 1.0
+	for c in rivales:
+		var papel = lugares[lugar_de[c]][0]
+		var lugar = float(lugares[lugar_de[c]][1])
+		var forma = forma_de[c]
 		var firmeza = 1.0
+		var grupo = "FONDISTA"
+		if punta.has(c):
+			grupo = "PUNTA"
+			if not (papel in ["puntero", "fuga", "duelo"]):
+				papel = "puntero"
+			lugar = max(lugar, ventaja_cuartomilla if _raza[c] == "cuartomilla" else ventaja_otros_punteros)
+		elif remate.has(c):
+			grupo = "REMATA"
+			papel = "fondo" if c == _patilargo else "rematador"
+		elif not (papel in ["parejo", "hierro"]):
+			papel = "parejo"
 		if papel == "duelo":
 			papel = "hierro" if (duelistas == 0 or los_dos_aguantan) else "puntero"
 			duelistas += 1
 			# Los dos duelistas iguales y bien pegados, cabeza a cabeza.
 			forma = 1.0
 			firmeza = 2.0
-		_papeles[rivales[i]] = [papel, forma, lugar, firmeza]
+		_papeles[c] = [papel, forma, lugar, firmeza]
 		if diagnostico_llegada:
-			print("[BDG-Jockey] ", rivales[i].name, ": ", papel, " en ", lugar, " forma ", stepify(forma, 0.01))
+			print("[BDG-Jockey] ", c.name, " (", _raza[c], "): ", grupo, " - ", papel, " en ", lugar, " forma ", stepify(forma, 0.01))
 	_sortear_final()
+	# El duelo del patilargo (no en las carreras de escapada).
+	_hay_duelo = duelo_patilargo and _patilargo != null and _final_sorteado != "Escapada" and randf() < probabilidad_duelo
+	_margen_duelo = rand_range(-diferencia_final_cuerpos, diferencia_final_cuerpos) * 9.0
+	_vel_duelo = -1.0
+	if diagnostico_llegada and _patilargo != null:
+		print("[BDG-Jockey] Duelo del patilargo: ", "SI" if _hay_duelo else "NO", " | llega a ", stepify(_margen_duelo / 9.0, 0.1), " cuerpos del de punta")
 	_actualizar_ritmo_rivales()
 	for c in _papeles.keys():
 		var arranque = c.velocidad_inicial if ("velocidad_inicial" in c) else c.velocidad_base
@@ -1360,6 +1477,34 @@ func _aplicar_estilos(camino):
 			c.velocidad_actual = arranque
 		if "velocidad_objetivo" in c:
 			c.velocidad_objetivo = arranque
+
+
+func _lugar_mayor(a, b):
+	return float(a[1]) > float(b[1])
+
+
+# Saca hasta "cuantos" caballos de la lista (y los quita de ella).
+func _tomar(lista, cuantos) -> Array:
+	var r = []
+	while r.size() < int(cuantos) and lista.size() > 0:
+		r.append(lista.pop_front())
+	return r
+
+
+# Raza del rival, por el caballo que le puso RepartidorCaballos.
+func _raza_de(c) -> String:
+	for h in c.get_children():
+		if not (h is Spatial) or not h.visible:
+			continue
+		if h.name.begins_with("Caballo_CuartoMilla"):
+			return "cuartomilla"
+		if h.name.begins_with("Caballo_Ingles"):
+			return "patilargo"
+		if h.name.begins_with("Caballo_Arabe"):
+			return "arabe"
+		if h.name.begins_with("Caballo_Americano"):
+			return "americano"
+	return "otro"
 
 
 # Reparte la forma del dia por grupos (punta, medio, cola, burros) y la
@@ -1389,7 +1534,10 @@ func _repartir_formas(cantidad) -> Array:
 
 # A veces el final no es el normal: uno se escapa, uno remata de lejos,
 # o llegan todos juntos.
+var _final_sorteado = "Normal"
+
 func _sortear_final():
+	_final_sorteado = "Normal"
 	if not reparto_de_llegada or _modo_recta_propio or _papeles.empty():
 		return
 	var tiro = randf()
@@ -1404,6 +1552,7 @@ func _sortear_final():
 		final = "Llegada amontonada"
 		for c in _papeles.keys():
 			_papeles[c][1] = rand_range(1.0 - forma_punta, 1.0 + forma_punta)
+	_final_sorteado = final
 	if diagnostico_llegada:
 		print("[BDG-Jockey] Final: ", final)
 
@@ -1438,6 +1587,8 @@ func _actualizar_ritmo_rivales():
 		extra = GestorNivel.obtener_extra_velocidad_rivales()
 	if _en_largas:
 		extra *= extra_rivales_largas
+	if _hay_duelo:
+		_medir_velocidades()
 	# Centro del lote: el recorrido del caballo del medio (contandote a ti).
 	var recorridos = [GestorNivel.obtener_recorrido(enrutador)]
 	for c in _papeles.keys():
@@ -1470,6 +1621,15 @@ func _actualizar_ritmo_rivales():
 		var factor_c = _factor_rivales_para(c)
 		var ahora = _velocidad_de_papel(papel, p) * forma * factor_c + extra + correccion
 		var al_final = _velocidad_de_papel(papel, 1.0) * forma * factor_c + extra
+		if _rematan.has(c):
+			_buscar_hueco(c)
+		var en_duelo = false
+		if _hay_duelo and c == _patilargo:
+			var v = _velocidad_duelo(c)
+			if v > 0.0:
+				ahora = v
+				al_final = v
+				en_duelo = true
 		if ("velocidad_inicial" in c) and ("velocidad_final" in c):
 			c.velocidad_inicial = ahora
 			c.velocidad_final = al_final
@@ -1477,8 +1637,108 @@ func _actualizar_ritmo_rivales():
 			c.velocidad_base = ahora
 			# Estos caballos cambian de velocidad cada tantos segundos; aqui se
 			# les pone ya, para que la formacion no se les atrase.
-			if peso > 0.0 and ("velocidad_objetivo" in c):
+			if (peso > 0.0 or en_duelo) and ("velocidad_objetivo" in c):
 				c.velocidad_objetivo = ahora
+			if en_duelo and ("velocidad_actual" in c):
+				c.velocidad_actual = ahora
+
+
+# Velocidad real de cada rival (lo que avanzo desde el cuadro anterior).
+func _medir_velocidades():
+	var dt = get_process_delta_time()
+	if dt <= 0.0:
+		return
+	for c in _papeles.keys():
+		if not is_instance_valid(c):
+			continue
+		var rec = GestorNivel.obtener_recorrido(c)
+		if _rec_previo.has(c):
+			var v = (rec - _rec_previo[c]) / dt
+			if v >= 0.0 and v < 80.0:
+				_vel_medida[c] = lerp(_vel_medida.get(c, v), v, clamp(5.0 * dt, 0.0, 1.0))
+		_rec_previo[c] = rec
+
+
+# En los ultimos metros, el patilargo va a la velocidad justa para llegar
+# a la meta pegado al rival que va adelante. Devuelve -1 si no le toca.
+func _velocidad_duelo(c) -> float:
+	var falta = GestorNivel.obtener_distancia_hasta_meta(c)
+	if falta < 0.0 or falta > metros_duelo or GestorNivel.ha_terminado(c):
+		return -1.0
+	var propia = _vel_medida.get(c, 0.0)
+	if _vel_duelo <= 0.0:
+		_vel_duelo = max(propia, 1.0)
+	# El rival que va adelante (sin contar al patilargo ni a ti).
+	var lider = null
+	var mejor = -INF
+	for r in _papeles.keys():
+		if r == c or not is_instance_valid(r):
+			continue
+		var rec = GestorNivel.obtener_recorrido(r)
+		if rec > mejor:
+			mejor = rec
+			lider = r
+	if lider == null or GestorNivel.ha_terminado(lider):
+		return _vel_duelo
+	var falta_lider = GestorNivel.obtener_distancia_hasta_meta(lider)
+	if falta_lider < 0.0:
+		return -1.0
+	var v_lider = max(_vel_medida.get(lider, 20.0), 5.0)
+	var tiempo = max(falta_lider / v_lider, 0.1)
+	var objetivo = clamp((falta + _margen_duelo) / tiempo, v_lider * 0.8, tope_remate_patilargo)
+	_vel_duelo = lerp(_vel_duelo, objetivo, clamp(suavidad_duelo * get_process_delta_time(), 0.0, 1.0))
+	return _vel_duelo
+
+
+# LOS QUE REMATAN BUSCAN HUECO: en los ultimos metros miran adelante y,
+# si alguien les tapa el camino, se abren por afuera (o por adentro si
+# afuera no se puede), para no quedarse trancados detras.
+func _buscar_hueco(c):
+	if not ("_entrada_recta_final" in GestorNivel):
+		return
+	var falta = GestorNivel.obtener_distancia_hasta_meta(c)
+	if falta < 0.0 or falta > metros_duelo or GestorNivel.ha_terminado(c):
+		return
+	var sep = GestorNivel.distancia_minima_lateral
+	var largo = GestorNivel.distancia_frenado_longitudinal
+	var rec = GestorNivel.obtener_recorrido(c)
+	var h0 = c.h_offset
+	var delante = []
+	var al_lado = []
+	for r in _papeles.keys() + [enrutador]:
+		if r == c or not is_instance_valid(r):
+			continue
+		var d = GestorNivel.obtener_recorrido(r) - rec
+		if d > -largo and d < largo + 1.0:
+			al_lado.append(r.h_offset)
+		if d > -2.0 and d < vista_rematadores:
+			delante.append(r.h_offset)
+	delante.sort()
+	var afuera = h0
+	for h in delante:
+		if abs(h - afuera) < sep:
+			afuera = h + sep
+	delante.invert()
+	var adentro = h0
+	for h in delante:
+		if abs(h - adentro) < sep:
+			adentro = h - sep
+	var destino = h0
+	if afuera <= GestorNivel.h_offset_maximo_curva and _paso_libre(h0, afuera, al_lado):
+		destino = afuera
+	elif adentro >= GestorNivel.carril_baranda and _paso_libre(h0, adentro, al_lado):
+		destino = adentro
+	GestorNivel._entrada_recta_final[c] = destino
+
+
+# Para cambiar de carril no puede cruzar por encima de un caballo que va al lado.
+func _paso_libre(desde, hasta, al_lado) -> bool:
+	var a = min(desde, hasta)
+	var b = max(desde, hasta)
+	for h in al_lado:
+		if h > a + 0.5 and h < b - 0.5:
+			return false
+	return true
 
 
 func _velocidad_de_papel(papel, p) -> float:

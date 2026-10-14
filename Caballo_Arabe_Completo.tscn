@@ -31,7 +31,7 @@ tiempo_apoyo = 0.25
 bajar_cuerpo = 0.06
 
 [node name="BoneAttachment" parent="Caballo_Arabe_01/Armature/Skeleton" index="0"]
-transform = Transform( -0.0766966, -0.997054, 0.000226304, 0.99705, -0.0766968, -0.0029411, 0.0029498, 7.70134e-08, 0.999996, 0.0991127, 1.19122, 0.0030281 )
+transform = Transform( -0.0766966, -0.997054, 0.000226304, 0.99705, -0.0766968, -0.0029411, 0.0029498, 7.70134e-08, 0.999996, 0.0991127, 1.11039, 0.00302809 )
 
 [node name="tripo_86a61581_cf2c_408b_a89a_6ca6651d7480" parent="Caballo_Arabe_01/Armature/Skeleton/BoneAttachment" index="0"]
 transform = Transform( 0.0336517, 0.599335, -0.0612683, -0.799046, 0.0249103, -0.074577, -0.0198484, 0.0133101, 2.89839, -0.044946, 0.0113639, -0.00373048 )
@@ -53,6 +53,10 @@ levantar_cabeza = 20.0
 brazos_adelante = -110.0
 doblar_codos = -70.0
 juntar_manos = 12.0
+latigo_cada_segundos_final = 1.2
+castigo_empieza_minimo = 300.0
+castigo_menos_seguido = 1.5
+latigo_golpes = 3
 latigo_modelo = ExtResource( 5 )
 latigo_giro = Vector3( -1, -47, 111 )
 color_casco = Color( 0.0392157, 0.0392157, 0.0392157, 1 )
@@ -72,7 +76,7 @@ estado = "listas"
 [node name="Cincha_Arabe" parent="Caballo_Arabe_01/Armature/Skeleton/BoneAttachment" index="2" instance=ExtResource( 6 )]
 
 [node name="BoneAttachment_Cabeza" type="BoneAttachment" parent="Caballo_Arabe_01/Armature/Skeleton" index="2"]
-transform = Transform( -0.193637, -0.981072, 0.0014663, 0.980983, -0.193639, -0.0132479, 0.013281, -0.0011268, 0.99991, -1.07243, 1.68447, 0.038412 )
+transform = Transform( -0.329311, -0.944212, 0.00422058, 0.944039, -0.329331, -0.0182145, 0.0185883, -0.00201375, 0.999825, -1.1307, 1.53747, 0.0408828 )
 bone_name = "tripo__Head_5"
 
 [node name="Brida_Arabe" parent="Caballo_Arabe_01/Armature/Skeleton/BoneAttachment_Cabeza" instance=ExtResource( 9 )]

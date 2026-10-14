@@ -31,7 +31,7 @@ tamano_rival_min = 1.0
 tamano_rival_max = 1.0
 
 [node name="BoneAttachment" type="BoneAttachment" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton" index="1"]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0186831, 0.501145, -0.00228256 )
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0186831, 0.489225, -0.00228256 )
 bone_name = "bone_5"
 
 [node name="Silla_Americano" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton/BoneAttachment" instance=ExtResource( 4 )]
@@ -58,6 +58,10 @@ rebote_rodillas = 3.0
 rebote_cadera = 0.0
 empuje_brazos = 5.0
 vaiven_cuerpo = 1.5
+latigo_cada_segundos_final = 1.5
+castigo_empieza_minimo = 300.0
+castigo_menos_seguido = 1.5
+latigo_golpes = 3
 latigo_duracion_golpe = 0.7
 latigo_arriba_brazo = Vector3( 0, 0, -120 )
 latigo_modelo = ExtResource( 12 )
@@ -82,7 +86,7 @@ estado = "listas"
 [node name="Cincha_Americano" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton/BoneAttachment" instance=ExtResource( 7 )]
 
 [node name="BoneAttachment_Cabeza" type="BoneAttachment" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton" index="2"]
-transform = Transform( 1.19642, 0.0925818, 0, -0.0925818, 1.19642, 0, 0, 0, 1.2, -0.371209, 0.704974, -0.00228253 )
+transform = Transform( 1.19214, 0.137156, 0, -0.137156, 1.19214, 0, 0, 0, 1.2, -0.363857, 0.699386, -0.00228253 )
 bone_name = "bone_16"
 
 [node name="Brida_Americano" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton/BoneAttachment_Cabeza" instance=ExtResource( 10 )]
