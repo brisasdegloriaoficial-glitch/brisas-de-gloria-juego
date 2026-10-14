@@ -8,7 +8,8 @@ extends Spatial
 #   - los Cuarto de Milla salen como punteros velocistas (rapidos al arrancar),
 #   - los Ingleses reemplazan americanos y salen como rematadores (atropellan al final),
 #   - cada carrera sale una mezcla distinta.
-# El caballo del jugador no se toca.
+# El caballo del jugador: sale de la RAZA que el jugador escogio en el panel
+# UNIFORME (americano si no escogio nada).
 # Toma como molde el Caballo_Americano_Completo del jugador (misma altura y giro),
 # y esconde el caballo viejo de cada rival.
 
@@ -16,38 +17,45 @@ export(PackedScene) var escena_americano     # arrastra aquí Caballo_Americano_
 export(PackedScene) var escena_arabe         # arrastra aquí Caballo_Arabe_Completo.tscn
 export(PackedScene) var escena_cuartomilla   # arrastra aquí Caballo_CuartoMilla.tscn (vacío = no salen)
 export(PackedScene) var escena_ingles        # arrastra aquí Caballo_Ingles.tscn (vacío = no salen)
-export var cantidad_arabes := 5
+export var cantidad_arabes := 4
 export var separar_arabes := true            # nunca dos árabes en carriles vecinos
-export var tamano_rival_min := 0.88          # tamaño de los rivales comparado con el jugador (1 = igual)
+export var tamano_rival_min := 0.97          # tamaño de los rivales comparado con el jugador (1 = igual)
 export var tamano_rival_max := 0.97
-export var tamano_arabe := 1.0               # ajuste extra del tamaño de los árabes (1 = como en Prueba_Jockey)
+export var tamano_arabe := 1.03               # ajuste extra del tamaño de los árabes (1 = como en Prueba_Jockey)
 export var girar_arabe := 0.0                # grados, por si el árabe sale mirando para otro lado
-export var altura_extra_arabe := 0.0         # + sube, - baja a los árabes (afinar a ojo)
+export var altura_extra_arabe := -7.5         # + sube, - baja a los árabes (afinar a ojo)
 export var cantidad_cuartomilla := 2
 export var tamano_cuartomilla := 1.0         # 1 = su tamaño natural (ya viene en su escena)
 export var altura_extra_cuartomilla := -1.0  # + sube, - baja a los Cuarto de Milla (afinar a ojo)
 export var cuartomilla_punteros := true      # los Cuarto de Milla salen como punteros (rapidos al arrancar)
-export var cantidad_ingles := 3
+export var cantidad_ingles := 1
 export var tamano_ingles := 1.0              # 1 = su tamaño natural (ya viene en su escena)
 export var altura_extra_ingles := -1.0       # + sube, - baja a los Ingleses (afinar a ojo)
 export var ingles_rematadores := true        # los Ingleses salen tranquilos y atropellan al final
-export var tamano_jugador := 0.925          # 1 = como está; menos de 1 achica al caballo del jugador
+export var tamano_jugador := 0.8          # 1 = como está; menos de 1 achica al caballo del jugador
 export var nombre_pista := "TrackPath"
 export var nombre_jugador := "Enrutador_Caballo1"
 export var nombre_modelo_jugador := "Caballo_Americano_Completo"
+# Donde el panel UNIFORME guarda la raza que escogio el jugador
+export var archivo_uniforme := "user://sedas_bdg_v2.cfg"
 
 # ---- Estrategias al azar en cada carrera ----
 # Los punteros (salen rapido y aflojan al final) y los rematadores
 # (salen lento y atropellan al final) pueden cambiar de estilo cada
 # carrera: asi no es siempre el mismo numero el que se va a la punta.
 # Los de ritmo constante no cambian.
-export var sortear_estilos := true
+export var sortear_estilos := false
 export var probabilidad_cambiar_estilo := 0.5   # 0.5 = la mitad de las veces cambia
 export var velocidad_maxima_puntero := 32.0     # tope de salida para un rematador que pasa a puntero
 export var sortear_en_800 := false              # la de 800 m no se toca
 
 
+var _jinete_jugador = null
+var _jockey_jugador = null
+
+
 func _ready():
+	set_process(false)
 	randomize()
 	call_deferred("_repartir")
 	get_tree().create_timer(4.0).connect("timeout", self, "_medir_tamanos")
@@ -87,6 +95,15 @@ func _repartir():
 		push_warning("RepartidorCaballos: no encontré " + nombre_jugador)
 		return
 	_sortear_estilos(pista, jugador)
+	# Si en el Inspector se vaciaron las escenas, se cargan solas.
+	if escena_americano == null:
+		escena_americano = _escena("res://Caballos/Caballo_Americano_Completo.tscn")
+	if escena_arabe == null:
+		escena_arabe = _escena("res://Caballo_Arabe_Completo.tscn")
+	if escena_cuartomilla == null:
+		escena_cuartomilla = _escena("res://Caballos/Caballo_CuartoMilla.tscn")
+	if escena_ingles == null:
+		escena_ingles = _escena("res://Caballos/Caballo_Ingles.tscn")
 	var modelo_jugador = jugador.get_node_or_null(nombre_modelo_jugador)
 	if modelo_jugador == null or escena_americano == null or escena_arabe == null:
 		push_warning("RepartidorCaballos: faltan las escenas o el modelo del jugador.")
@@ -115,6 +132,20 @@ func _repartir():
 	var tmp = escena_americano.instance()
 	var raiz_americano : Basis = tmp.transform.basis
 	tmp.free()
+
+	# Raza del caballo del jugador (la que escogio en UNIFORME)
+	var raza_j := _raza_del_jugador()
+	if raza_j != "americano":
+		var escena_j = escena_de_raza(raza_j)
+		if escena_j != null:
+			# Mismo tamano que tendria el americano del jugador en carrera
+			var f_j := tamano_jugador * _factor_americano_jugador(modelo_jugador)
+			var m_j = _poner_modelo(jugador, escena_j, molde, raiz_americano, raza_j, referencia, f_j)
+			_jinete_jugador = _jinete_de(m_j)
+			if _jinete_jugador != null:
+				_jinete_jugador.latigo_automatico = false
+				_jockey_jugador = jugador.get_node_or_null("Jockey")
+				set_process(true)
 
 	# Todos los enrutadores, ordenados por carril
 	var todos := []
@@ -260,7 +291,7 @@ func _elegir_arabes(rivales : Array) -> Array:
 	return otra.slice(0, n - 1) if n > 0 else []
 
 
-func _poner_modelo(enrutador, escena : PackedScene, molde : Transform, raiz_americano : Basis, raza : String, referencia):
+func _poner_modelo(enrutador, escena : PackedScene, molde : Transform, raiz_americano : Basis, raza : String, referencia, tamano_fijo := -1.0):
 	# Esconder el caballo viejo del rival
 	for c in enrutador.get_children():
 		if c is Spatial and c.name.begins_with("Caballo"):
@@ -271,20 +302,26 @@ func _poner_modelo(enrutador, escena : PackedScene, molde : Transform, raiz_amer
 	t.origin = molde.origin
 	t.basis = molde.basis * raiz_americano.inverse() * m.transform.basis
 	var f := rand_range(tamano_rival_min, tamano_rival_max)
+	var f_altura := 1.0
+	if tamano_fijo > 0.0:
+		f = tamano_fijo
+		# la altura extra se afino con el tamano de los rivales
+		f_altura = f / max(0.01, (tamano_rival_min + tamano_rival_max) * 0.5)
 	if raza == "arabe":
 		t.basis = t.basis.rotated(Vector3.UP, deg2rad(girar_arabe))
 	t.basis = t.basis.scaled(Vector3(f, f, f))
 	m.transform = t
 	enrutador.add_child(m)
 	if raza == "arabe":
-		_ajustar(m, referencia, tamano_arabe, altura_extra_arabe)
+		_ajustar(m, referencia, tamano_arabe, altura_extra_arabe * f_altura)
 	elif raza == "cuartomilla":
-		_ajustar(m, referencia, tamano_cuartomilla, altura_extra_cuartomilla)
+		_ajustar(m, referencia, tamano_cuartomilla, altura_extra_cuartomilla * f_altura)
 	elif raza == "ingles":
-		_ajustar(m, referencia, tamano_ingles, altura_extra_ingles)
+		_ajustar(m, referencia, tamano_ingles, altura_extra_ingles * f_altura)
 	var med = _huesos(m)
 	if med != null:
 		print("[Repartidor] ", enrutador.name, " -> ", raza.to_upper() if raza != "americano" else raza, " | cascos en y=", stepify(med[1], 0.01))
+	return m
 
 
 # Pone al árabe o al Cuarto de Milla donde va el cuerpo del americano (versión que dio el tamaño correcto)
@@ -374,3 +411,75 @@ func _apagar(n):
 		n.stop()
 	for h in n.get_children():
 		_apagar(h)
+
+
+# La raza que el jugador escogio en el panel UNIFORME.
+func _raza_del_jugador() -> String:
+	var cfg = ConfigFile.new()
+	if cfg.load(archivo_uniforme) != OK:
+		return "americano"
+	var r = str(cfg.get_value("jugador", "raza", "americano"))
+	if escena_de_raza(r) == null:
+		return "americano"
+	return r
+
+
+# La escena de cada raza (la usa tambien el probador del panel UNIFORME).
+func escena_de_raza(raza : String):
+	if raza == "arabe":
+		return escena_arabe
+	elif raza == "cuartomilla":
+		return escena_cuartomilla
+	elif raza == "ingles":
+		return escena_ingles
+	return escena_americano
+
+
+# El americano del jugador se agranda solo al correr (su perilla Tamano Jugador
+# comparada con la de los rivales). Aqui se calcula cuanto, para que el
+# caballo de otra raza salga del mismo tamano.
+func _factor_americano_jugador(modelo) -> float:
+	for n in _con_tamano(modelo):
+		var medio : float = (n.tamano_rival_min + n.tamano_rival_max) * 0.5
+		if medio > 0.0:
+			return n.tamano_jugador / medio
+	return 1.0
+
+
+func _con_tamano(n) -> Array:
+	var r = []
+	if ("tamano_jugador" in n) and ("tamano_rival_min" in n) and ("tamano_rival_max" in n):
+		r.append(n)
+	for h in n.get_children():
+		r += _con_tamano(h)
+	return r
+
+
+func _jinete_de(n):
+	if n == null:
+		return null
+	if n.has_method("latigazo"):
+		return n
+	for h in n.get_children():
+		var r = _jinete_de(h)
+		if r != null:
+			return r
+	return null
+
+
+# Latigazo del jugador con su boton, cuando su caballo no es el americano
+# (el americano ya lo hace solo). En 800 m no hay latigo.
+func _process(_delta):
+	if _jinete_jugador == null or not is_instance_valid(_jinete_jugador):
+		set_process(false)
+		return
+	if Input.is_action_just_pressed("latigazo_derecho"):
+		var j = _jockey_jugador
+		if j == null or not ("modo_arreo_ritmo" in j) or not j.modo_arreo_ritmo:
+			_jinete_jugador.latigazo()
+
+
+func _escena(ruta : String):
+	if ResourceLoader.exists(ruta):
+		return load(ruta)
+	return null

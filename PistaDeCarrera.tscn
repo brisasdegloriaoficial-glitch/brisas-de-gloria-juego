@@ -1,4 +1,4 @@
-[gd_scene load_steps=242 format=2]
+[gd_scene load_steps=241 format=2]
 
 [ext_resource path="res://TrackPath.gd" type="Script" id=1]
 [ext_resource path="res://Caballos/Caballo_final.gd" type="Script" id=2]
@@ -52,7 +52,6 @@
 [ext_resource path="res://SonidoFotoFinish.gd" type="Script" id=50]
 [ext_resource path="res://Caballos/Caballo_Americano_Completo.tscn" type="PackedScene" id=51]
 [ext_resource path="res://RepartidorCaballos.gd" type="Script" id=52]
-[ext_resource path="res://Caballo_Arabe_Completo.tscn" type="PackedScene" id=53]
 [ext_resource path="res://Enrutador_Caballo11.gd" type="Script" id=54]
 [ext_resource path="res://Enrutador_Caballo12.gd" type="Script" id=55]
 [ext_resource path="res://SelectorSedas.gd" type="Script" id=56]
@@ -71,8 +70,8 @@
 [ext_resource path="res://Juez_Partida.gd" type="Script" id=69]
 [ext_resource path="res://ArenitaCascos.gd" type="Script" id=70]
 [ext_resource path="res://MusicaPrevia.gd" type="Script" id=71]
-[ext_resource path="res://Caballos/Caballo_CuartoMilla.tscn" type="PackedScene" id=72]
-[ext_resource path="res://Caballos/Caballo_Ingles.tscn" type="PackedScene" id=73]
+[ext_resource path="res://VallasCurvas/VallasCurvas.gd" type="Script" id=74]
+[ext_resource path="res://Laguna.gd" type="Script" id=75]
 
 [sub_resource type="PhysicsMaterial" id=7]
 
@@ -34175,17 +34174,6 @@ volume_db = 10.0
 [node name="RepartidorCaballos" type="Spatial" parent="."]
 transform = Transform( 17.4, 0, 0, 0, 17.4, 0, 0, 0, 17.4, 0, 0, 0 )
 script = ExtResource( 52 )
-escena_americano = ExtResource( 51 )
-escena_arabe = ExtResource( 53 )
-escena_cuartomilla = ExtResource( 72 )
-escena_ingles = ExtResource( 73 )
-cantidad_arabes = 4
-tamano_rival_min = 0.97
-tamano_arabe = 1.03
-altura_extra_arabe = -7.5
-cantidad_ingles = 1
-tamano_jugador = 0.8
-sortear_estilos = false
 
 [node name="SelectorSedas" type="CanvasLayer" parent="."]
 script = ExtResource( 56 )
@@ -34252,6 +34240,14 @@ altura_suelo = 1.18
 [node name="MusicaPrevia" type="AudioStreamPlayer" parent="."]
 script = ExtResource( 71 )
 volumen_musica = -10.0
+
+[node name="VallasCurvas" type="Spatial" parent="."]
+script = ExtResource( 74 )
+terminar_despues_de_curva = -45.0
+
+[node name="Laguna" type="Spatial" parent="."]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -378, 0, 512 )
+script = ExtResource( 75 )
 
 [editable path="TrackPath/Enrutador_Caballo1/Caballo"]
 [editable path="TrackPath/Enrutador_Caballo1/Caballo/Armature/Skeleton/BoneAttachment/Jinete"]

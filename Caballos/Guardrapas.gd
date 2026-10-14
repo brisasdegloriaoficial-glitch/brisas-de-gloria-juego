@@ -24,8 +24,8 @@ export var colores := PoolColorArray([Color("704a2b"), Color("704a2b"), Color("7
 	Color("704a2b"), Color("704a2b"), Color("704a2b"), Color("704a2b"),
 	Color("3b2416"), Color("5a3820"), Color("8b5a2b"), Color("6b2f1c"),
 	Color("1a1a1a"), Color("3c3c3c"), Color("6e6e6e"), Color("9b0030"), Color("5e0020"),
-	Color("1f2f5a"), Color("0f3d2a"), Color("0047ff"), Color("5533ff"), Color("7a00e6"),
-	Color("00b140"), Color("ff6a00")])
+	Color("1f2f5a"), Color("0f3d2a"), Color("2e3b4e"), Color("4a3b52"), Color("3e4a2f"),
+	Color("7a5c3a"), Color("5b4a3f")])
 # Encendido: en cada carrera cada caballo saca un color al azar (se pueden repetir).
 # Apagado: el color va por numero (1 = el primero de la lista, 2 = el segundo...).
 export var juegos_al_azar := true
@@ -231,7 +231,7 @@ func _pintar_arreos(modelo, color : Color):
 		if cabeza:
 			var mat = SpatialMaterial.new()
 			mat.albedo_color = color
-			mat.roughness = 0.85
+			mat.roughness = 1.0
 			for mi in _mallas(cabeza):
 				if mi.mesh != null and mi.mesh.get_surface_count() > 0:
 					mi.set_surface_material(0, mat)
