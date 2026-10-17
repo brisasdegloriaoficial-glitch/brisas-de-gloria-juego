@@ -31,7 +31,7 @@ tamano_rival_min = 1.0
 tamano_rival_max = 1.0
 
 [node name="BoneAttachment" type="BoneAttachment" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton" index="1"]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0186831, 0.489225, -0.00228256 )
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0186831, 0.460162, -0.00228256 )
 bone_name = "bone_5"
 
 [node name="Silla_Americano" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton/BoneAttachment" instance=ExtResource( 4 )]
@@ -86,10 +86,11 @@ estado = "listas"
 [node name="Cincha_Americano" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton/BoneAttachment" instance=ExtResource( 7 )]
 
 [node name="BoneAttachment_Cabeza" type="BoneAttachment" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton" index="2"]
-transform = Transform( 1.19214, 0.137156, 0, -0.137156, 1.19214, 0, 0, 0, 1.2, -0.363857, 0.699386, -0.00228253 )
+transform = Transform( 1.1999, 0.0155338, 0, -0.0155338, 1.1999, 0, 0, 0, 1.2, -0.383079, 0.652348, -0.00228253 )
 bone_name = "bone_16"
 
 [node name="Brida_Americano" parent="Caballo_Americano_01_Rigueado/Armature/Skeleton/BoneAttachment_Cabeza" instance=ExtResource( 10 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 0.85, 0, 0, 0 )
 
 [editable path="Caballo_Americano_01_Rigueado"]
 [editable path="Caballo_Americano_01_Rigueado/Armature/Skeleton/BoneAttachment/Silla_Americano"]

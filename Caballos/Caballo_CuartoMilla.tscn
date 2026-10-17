@@ -30,7 +30,7 @@ subir_nariz = 18.0
 bajar_cola = -20.0
 
 [node name="BoneAttachment" type="BoneAttachment" parent="Caballo_CuartoMilla_01/RootNode/Armature/Skeleton" index="1"]
-transform = Transform( 0.120568, 0.952982, 0.278006, 0.992107, -0.125392, -0.000432358, 0.0344477, 0.275863, -0.960579, 0.0206283, 0.65091, -0.0844551 )
+transform = Transform( 0.120568, 0.952982, 0.278006, 0.992107, -0.125392, -0.000432358, 0.0344477, 0.275863, -0.960579, 0.0206283, 0.661626, -0.0844551 )
 bone_name = "tripo__Spine_1"
 
 [node name="Silla_Americano" parent="Caballo_CuartoMilla_01/RootNode/Armature/Skeleton/BoneAttachment" instance=ExtResource( 3 )]
@@ -80,11 +80,11 @@ caballo = "cuartomilla"
 estado = "listas"
 
 [node name="BoneAttachment_Cabeza" type="BoneAttachment" parent="Caballo_CuartoMilla_01/RootNode/Armature/Skeleton" index="2"]
-transform = Transform( -0.156961, 0.820036, -0.550367, -0.370097, 0.467827, 0.802601, 0.915637, 0.329667, 0.230062, 0.489685, 0.780901, 0.0749133 )
+transform = Transform( -0.137261, 0.764165, -0.630248, -0.432589, 0.526142, 0.73215, 0.891081, 0.373134, 0.258351, 0.492918, 0.786967, 0.0750678 )
 bone_name = "bone_9"
 
 [node name="Brida_Americano" parent="Caballo_CuartoMilla_01/RootNode/Armature/Skeleton/BoneAttachment_Cabeza" instance=ExtResource( 12 )]
-transform = Transform( -0.204406, -0.349739, -1.07614, -0.879202, 0.754168, -0.0139396, 0.612783, 0.965396, -0.378968, -0.004, 0.059, 0.007 )
+transform = Transform( -0.224828, -0.349739, -1.07614, -0.967042, 0.754169, -0.01394, 0.674005, 0.965395, -0.378968, -0.004, 0.059, 0.007 )
 
 [editable path="Caballo_CuartoMilla_01"]
 [editable path="Caballo_CuartoMilla_01/RootNode/Armature/Skeleton/BoneAttachment/Silla_Americano"]

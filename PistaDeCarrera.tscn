@@ -33308,9 +33308,6 @@ del_izq_rodilla = 1.6
 [node name="Armature" parent="TrackPath/Enrutador_Caballo1/Caballo" index="0"]
 transform = Transform( 1, 1.86265e-09, -2.98023e-08, 0, 1, 1.62981e-09, -5.96046e-08, 6.51926e-09, 1, -56.391, 8.04405, -31.8062 )
 
-[node name="Skeleton" parent="TrackPath/Enrutador_Caballo1/Caballo/Armature" index="0"]
-bones/2/bound_children = [ NodePath("BoneAttachment") ]
-
 [node name="tripo_node_24d7b5ee-686d-49f8-970c-480cbf98637e" parent="TrackPath/Enrutador_Caballo1/Caballo/Armature/Skeleton" index="0"]
 material_override = SubResource( 15 )
 
@@ -33367,9 +33364,6 @@ script = ExtResource( 2 )
 [node name="Armature" parent="TrackPath/Enrutador_Caballo8/Caballo8" index="0"]
 transform = Transform( 1, 1.86265e-09, -2.98023e-08, 0, 1, 1.62981e-09, -5.96046e-08, 6.51926e-09, 1, -56.391, 8.04405, -31.8062 )
 
-[node name="Skeleton" parent="TrackPath/Enrutador_Caballo8/Caballo8/Armature" index="0"]
-bones/2/bound_children = [ NodePath("BoneAttachment") ]
-
 [node name="tripo_node_24d7b5ee-686d-49f8-970c-480cbf98637e" parent="TrackPath/Enrutador_Caballo8/Caballo8/Armature/Skeleton" index="0"]
 material_override = SubResource( 134 )
 
@@ -33415,9 +33409,6 @@ script = ExtResource( 2 )
 [node name="Armature" parent="TrackPath/Enrutador_Caballo9/Caballo9" index="0"]
 transform = Transform( 1, 1.86265e-09, -2.98023e-08, 0, 1, 1.62981e-09, -5.96046e-08, 6.51926e-09, 1, -56.391, 8.04405, -31.8062 )
 
-[node name="Skeleton" parent="TrackPath/Enrutador_Caballo9/Caballo9/Armature" index="0"]
-bones/2/bound_children = [ NodePath("BoneAttachment") ]
-
 [node name="tripo_node_24d7b5ee-686d-49f8-970c-480cbf98637e" parent="TrackPath/Enrutador_Caballo9/Caballo9/Armature/Skeleton" index="0"]
 material_override = SubResource( 2138 )
 
@@ -33462,9 +33453,6 @@ script = ExtResource( 2 )
 
 [node name="Armature" parent="TrackPath/Enrutador_Caballo10/Caballo10" index="0"]
 transform = Transform( 1, 1.86265e-09, -2.98023e-08, 0, 1, 1.62981e-09, -5.96046e-08, 6.51926e-09, 1, -56.391, 8.04405, -31.8062 )
-
-[node name="Skeleton" parent="TrackPath/Enrutador_Caballo10/Caballo10/Armature" index="0"]
-bones/2/bound_children = [ NodePath("BoneAttachment") ]
 
 [node name="tripo_node_24d7b5ee-686d-49f8-970c-480cbf98637e" parent="TrackPath/Enrutador_Caballo10/Caballo10/Armature/Skeleton" index="0"]
 material_override = SubResource( 2137 )
@@ -33512,9 +33500,6 @@ script = ExtResource( 2 )
 [node name="Armature" parent="TrackPath/Enrutador_Caballo11/Caballo11" index="0"]
 transform = Transform( 1, 1.86265e-09, -2.98023e-08, 0, 1, 1.62981e-09, -5.96046e-08, 6.51926e-09, 1, -56.391, 8.04405, -31.8062 )
 
-[node name="Skeleton" parent="TrackPath/Enrutador_Caballo11/Caballo11/Armature" index="0"]
-bones/2/bound_children = [ NodePath("BoneAttachment") ]
-
 [node name="tripo_node_24d7b5ee-686d-49f8-970c-480cbf98637e" parent="TrackPath/Enrutador_Caballo11/Caballo11/Armature/Skeleton" index="0"]
 material_override = SubResource( 2137 )
 
@@ -33560,9 +33545,6 @@ script = ExtResource( 2 )
 
 [node name="Armature" parent="TrackPath/Enrutador_Caballo12/Caballo12" index="0"]
 transform = Transform( 1, 1.86265e-09, -2.98023e-08, 0, 1, 1.62981e-09, -5.96046e-08, 6.51926e-09, 1, -56.391, 8.04405, -31.8062 )
-
-[node name="Skeleton" parent="TrackPath/Enrutador_Caballo12/Caballo12/Armature" index="0"]
-bones/2/bound_children = [ NodePath("BoneAttachment") ]
 
 [node name="tripo_node_24d7b5ee-686d-49f8-970c-480cbf98637e" parent="TrackPath/Enrutador_Caballo12/Caballo12/Armature/Skeleton" index="0"]
 material_override = SubResource( 2137 )
@@ -33610,9 +33592,6 @@ script = ExtResource( 2 )
 [node name="Armature" parent="TrackPath/Enrutador_Caballo7/Caballo7" index="0"]
 transform = Transform( 1, 1.86265e-09, -2.98023e-08, 0, 1, 1.62981e-09, -5.96046e-08, 6.51926e-09, 1, -56.391, 8.04405, -31.8062 )
 
-[node name="Skeleton" parent="TrackPath/Enrutador_Caballo7/Caballo7/Armature" index="0"]
-bones/2/bound_children = [ NodePath("BoneAttachment") ]
-
 [node name="tripo_node_24d7b5ee-686d-49f8-970c-480cbf98637e" parent="TrackPath/Enrutador_Caballo7/Caballo7/Armature/Skeleton" index="0"]
 material_override = SubResource( 120 )
 
@@ -33657,9 +33636,6 @@ script = ExtResource( 2 )
 
 [node name="Armature" parent="TrackPath/Enrutador_Caballo6/Caballo6" index="0"]
 transform = Transform( 1, 1.86265e-09, -2.98023e-08, 0, 1, 1.62981e-09, -5.96046e-08, 6.51926e-09, 1, -56.391, 8.04405, -31.8062 )
-
-[node name="Skeleton" parent="TrackPath/Enrutador_Caballo6/Caballo6/Armature" index="0"]
-bones/2/bound_children = [ NodePath("BoneAttachment") ]
 
 [node name="tripo_node_24d7b5ee-686d-49f8-970c-480cbf98637e" parent="TrackPath/Enrutador_Caballo6/Caballo6/Armature/Skeleton" index="0"]
 material_override = SubResource( 106 )
@@ -33706,9 +33682,6 @@ script = ExtResource( 2 )
 [node name="Armature" parent="TrackPath/Enrutador_Caballo5/Caballo5" index="0"]
 transform = Transform( 1, 1.86265e-09, -2.98023e-08, 0, 1, 1.62981e-09, -5.96046e-08, 6.51926e-09, 1, -56.391, 8.04405, -31.8062 )
 
-[node name="Skeleton" parent="TrackPath/Enrutador_Caballo5/Caballo5/Armature" index="0"]
-bones/2/bound_children = [ NodePath("BoneAttachment") ]
-
 [node name="tripo_node_24d7b5ee-686d-49f8-970c-480cbf98637e" parent="TrackPath/Enrutador_Caballo5/Caballo5/Armature/Skeleton" index="0"]
 material_override = SubResource( 104 )
 
@@ -33753,9 +33726,6 @@ script = ExtResource( 2 )
 
 [node name="Armature" parent="TrackPath/Enrutador_Caballo4/Caballo4" index="0"]
 transform = Transform( 1, 1.86265e-09, -2.98023e-08, 0, 1, 1.62981e-09, -5.96046e-08, 6.51926e-09, 1, -56.391, 8.04405, -31.8062 )
-
-[node name="Skeleton" parent="TrackPath/Enrutador_Caballo4/Caballo4/Armature" index="0"]
-bones/2/bound_children = [ NodePath("BoneAttachment") ]
 
 [node name="tripo_node_24d7b5ee-686d-49f8-970c-480cbf98637e" parent="TrackPath/Enrutador_Caballo4/Caballo4/Armature/Skeleton" index="0"]
 material_override = SubResource( 86 )
@@ -33803,9 +33773,6 @@ script = ExtResource( 2 )
 [node name="Armature" parent="TrackPath/Enrutador_Caballo3/Caballo3" index="0"]
 transform = Transform( 1, 1.86265e-09, -2.98023e-08, 0, 1, 1.62981e-09, -5.96046e-08, 6.51926e-09, 1, -56.391, 8.04405, -31.8062 )
 
-[node name="Skeleton" parent="TrackPath/Enrutador_Caballo3/Caballo3/Armature" index="0"]
-bones/2/bound_children = [ NodePath("BoneAttachment") ]
-
 [node name="tripo_node_24d7b5ee-686d-49f8-970c-480cbf98637e" parent="TrackPath/Enrutador_Caballo3/Caballo3/Armature/Skeleton" index="0"]
 material_override = SubResource( 2139 )
 
@@ -33850,9 +33817,6 @@ script = ExtResource( 2 )
 
 [node name="Armature" parent="TrackPath/Enrutador_Caballo2/Caballo2" index="0"]
 transform = Transform( 1, 1.86265e-09, -2.98023e-08, 0, 1, 1.62981e-09, -5.96046e-08, 6.51926e-09, 1, -56.391, 8.04405, -31.8062 )
-
-[node name="Skeleton" parent="TrackPath/Enrutador_Caballo2/Caballo2/Armature" index="0"]
-bones/2/bound_children = [ NodePath("BoneAttachment") ]
 
 [node name="tripo_node_24d7b5ee-686d-49f8-970c-480cbf98637e" parent="TrackPath/Enrutador_Caballo2/Caballo2/Armature/Skeleton" index="0"]
 material_override = SubResource( 30 )
