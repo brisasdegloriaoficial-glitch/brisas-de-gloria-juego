@@ -84,7 +84,7 @@ func _process(delta):
 func _velocidad_con_peloton(delta) -> float:
 	if not GestorNivel:
 		return velocidad_avance
-	var diferencia = GestorNivel.obtener_offset_promedio() - offset
+	var diferencia = GestorNivel.obtener_diferencia_con_peloton(self)
 	var factor = factor_agrupacion * GestorNivel.obtener_factor_relajacion()
 	var correccion_objetivo = clamp(diferencia * factor, -correccion_maxima, correccion_maxima)
 	_correccion_actual = lerp(_correccion_actual, correccion_objetivo, clamp(correccion_suavizado * delta, 0.0, 1.0))

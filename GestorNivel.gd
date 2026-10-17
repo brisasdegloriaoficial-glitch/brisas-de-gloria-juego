@@ -544,7 +544,35 @@ func obtener_offset_promedio() -> float:
 	if lista.size() % 2 == 1:
 		return lista[medio]
 	return (lista[medio - 1] + lista[medio]) * 0.5
-# --- GRUPOS DEL PELOTON (nuevo) ---
+# CORREGIDO 17-oct - FRENAZO EN EL POSTE DE LOS 2000 m.
+# La posicion de cada caballo en la pista (offset) vuelve a 0 al dar
+# la vuelta, justo en el poste de los 2200 m. Cuando el peloton
+# quedaba partido (unos ya habian pasado ese punto y otros no), la
+# mediana daba un salto de una vuelta entera: el que no habia pasado
+# frenaba en seco y el que si, salia disparado.
+# Ahora cada caballo mide la distancia a los demas DESDE SU PROPIO
+# LUGAR, corrigiendo ese salto, y saca la mediana de esas distancias.
+# Fuera de ese punto de la pista da exactamente lo mismo que antes.
+func obtener_diferencia_con_peloton(corredor) -> float:
+	_limpiar_corredores()
+	if _corredores.empty() or not is_instance_valid(corredor):
+		return 0.0
+	var mitad = _longitud_pista * 0.5
+	var lista = []
+	for otro in _corredores:
+		if not is_instance_valid(otro):
+			continue
+		var d = otro.offset - corredor.offset
+		if mitad > 0.0:
+			d = wrapf(d, -mitad, mitad)
+		lista.append(d)
+	if lista.empty():
+		return 0.0
+	lista.sort()
+	var medio = int(lista.size() / 2)
+	if lista.size() % 2 == 1:
+		return lista[medio]
+	return (lista[medio - 1] + lista[medio]) * 0.5# --- GRUPOS DEL PELOTON (nuevo) ---
 # En cada carrera se sortea en que grupo corre cada rival: 3 adelante
 # y despues grupos de 2, cada uno mas atras. Asi no van apilados y
 # queda espacio para maniobrar. El jugador no entra en el sorteo.

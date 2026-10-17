@@ -43,7 +43,7 @@ bones/3/bound_children = [ NodePath("BoneAttachment") ]
 bones/9/bound_children = [ NodePath("BoneAttachment_Cabeza") ]
 
 [node name="BoneAttachment" type="BoneAttachment" parent="Caballo_Ingles_01/RootNode/Armature/Skeleton" index="1"]
-transform = Transform( -0.480541, -0.730246, 0.485614, 0.824472, -0.564902, -0.0336167, 0.298873, 0.384221, 0.873527, -0.0297827, 0.732854, -0.0956861 )
+transform = Transform( -0.480541, -0.730246, 0.485614, 0.824472, -0.564902, -0.0336167, 0.298873, 0.384221, 0.873527, -0.0297827, 0.732959, -0.0956861 )
 bone_name = "tripo__Spine_2"
 
 [node name="Silla_Americano" parent="Caballo_Ingles_01/RootNode/Armature/Skeleton/BoneAttachment" instance=ExtResource( 10 )]
@@ -98,7 +98,7 @@ caballo = "ingles"
 estado = "listas"
 
 [node name="BoneAttachment_Cabeza" type="BoneAttachment" parent="Caballo_Ingles_01/RootNode/Armature/Skeleton" index="2"]
-transform = Transform( -0.111281, -0.809339, 0.576703, 0.993677, -0.0993125, 0.0523657, 0.0148922, 0.578884, 0.815274, -0.420441, 0.711913, 0.161565 )
+transform = Transform( -0.110239, -0.809443, 0.576757, 0.993795, -0.0983835, 0.0518758, 0.0147528, 0.578898, 0.815267, -0.420516, 0.712117, 0.161575 )
 bone_name = "tripo__Head_1"
 
 [node name="Brida_Americano" parent="Caballo_Ingles_01/RootNode/Armature/Skeleton/BoneAttachment_Cabeza" instance=ExtResource( 9 )]
