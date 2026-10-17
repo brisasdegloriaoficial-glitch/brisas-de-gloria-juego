@@ -5,7 +5,8 @@ extends Spatial
 # Pone al jinete en postura de jockey, le da el movimiento de galope
 # y el latigazo con la mano derecha. Todo se ajusta en el Inspector.
 # Ángulos en grados.
-# VERSION: castigo en los ultimos 400 m (oct 2026)
+# VERSION 16-oct: castigo corrido en los ultimos metros (unos dan dos latigazos, otros castigan corrido)
+# (antes) VERSION: castigo en los ultimos 400 m (oct 2026)
 #
 # SIMETRÍA: el esqueleto de Tripo trae giros escondidos distintos en cada
 # lado (columna, hombros, brazos). Con "simetria" activado, la columna se
@@ -51,6 +52,15 @@ export var latigo_cada_segundos_final := 1.8  # en el final castigan mas seguido
 export var castigo_empieza_minimo := 150.0    # el que mas tarde empieza a castigar, a cuantos metros de la meta
 export var castigo_menos_seguido := 2.5       # el que menos castiga deja hasta 2.5 veces mas pausa
 export var latigo_golpes := 2                 # maximo de latigazos seguidos (cada rival da de 1 a este numero)
+# NUEVO 16-oct - CASTIGO CORRIDO: en cada carrera, al azar, algunos rivales
+# castigan corrido (latigazo tras latigazo, casi sin pausa) en los ultimos
+# metros; los demas siguen dando sus series de uno o dos latigazos.
+# 0.4 = 4 de cada 10 rivales castigan corrido. 0 = ninguno, 1 = todos.
+# (En el patilargo puedes ponerle 1 para que siempre remate castigando corrido.)
+export var probabilidad_castigo_corrido := 0.4
+export var metros_castigo_corrido := 400.0    # desde cuantos metros antes de la meta castigan corrido (desde la ultima curva)
+export var golpes_castigo_corrido := 4        # latigazos seguidos en cada serie del castigo corrido
+export var pausa_castigo_corrido := 0.15      # segundos de pausa entre serie y serie (casi nada)
 export var mostrar_metros_en_consola := false # para revisar: escribe abajo cuantos metros le faltan a cada uno
 
 # ---------- ARREO (empujar con las manos, sin latigo) ----------
@@ -92,6 +102,8 @@ var _fase_latigo := 0.0
 var _golpes_ahora := 2
 var _es_jugador := false
 var _factor_castigo := 1.0
+var _castiga_corrido := false
+var _estaba_corrido := false
 var _metros_empieza := 400.0
 var _arreo := 0.0
 var _t_arreo := 0.0
@@ -129,6 +141,7 @@ func _ready():
 	if not Engine.editor_hint and not _es_jugador:
 		_factor_castigo = rand_range(1.0, max(castigo_menos_seguido, 1.0))
 		_metros_empieza = rand_range(min(castigo_empieza_minimo, metros_castigo), metros_castigo)
+		_castiga_corrido = randf() < probabilidad_castigo_corrido
 		_proximo_arreo = arreo_cada_segundos * rand_range(0.3, 1.5)
 	if desfasar_galope:
 		_t = randf() * 10.0
@@ -172,7 +185,14 @@ func _tiempo_al_azar() -> float:
 	var base : float = latigo_cada_segundos
 	if _estaba_en_final:
 		base = latigo_cada_segundos_final * _factor_castigo
+	if _corrido_ahora():
+		return pausa_castigo_corrido * rand_range(0.8, 1.2)
 	return base * rand_range(1.0 - v, 1.0 + v)
+
+
+# Este rival le toca castigar corrido y ya esta en esos ultimos metros.
+func _corrido_ahora() -> bool:
+	return _castiga_corrido and not _es_jugador and _metros >= 0.0 and _metros <= metros_castigo_corrido
 
 
 # Cuantos metros le faltan a este caballo para la meta (ultima vuelta).
@@ -216,6 +236,11 @@ func _process(delta):
 		_t_latigo = 0.0
 		_proximo_latigo = rand_range(0.1, 1.5)
 	_estaba_en_final = en_final
+	# Al entrar al castigo corrido arranca enseguida, sin esperar la pausa larga.
+	var corrido := _corrido_ahora()
+	if corrido and not _estaba_corrido:
+		_proximo_latigo = min(_proximo_latigo, rand_range(0.1, 0.4))
+	_estaba_corrido = corrido
 
 	if latigo_automatico and not _latigo_activo:
 		var puede := not _termino
@@ -230,6 +255,8 @@ func _process(delta):
 				_proximo_latigo = _tiempo_al_azar()
 				if _es_jugador:
 					latigazo()
+				elif corrido:
+					latigazo(int(max(golpes_castigo_corrido, 1)))
 				else:
 					latigazo(1 + randi() % int(max(latigo_golpes, 1)))
 

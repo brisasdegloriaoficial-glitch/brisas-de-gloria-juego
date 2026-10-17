@@ -1,13 +1,18 @@
 extends AudioStreamPlayer
-# Musica de todo lo que NO es carrera (Beneath the Bit):
-#  - Pantalla de inicio: suena en bucle mientras se elige distancia y uniforme.
+# Musica de todo lo que NO es carrera:
+#  - Pantalla de inicio: suena mientras se elige distancia y uniforme.
 #    Al pulsar PARTIDA se apaga suave (se oyen campanadas y gatera).
 #  - Pausa en plena carrera (PAUSAR o ajustes): entra; al seguir, se va.
 #  - Despues de la meta: la bulla del publico tapa todo y, en el relevo,
 #    en vez de volver la musica de carrera, entra esta.
 # Al elegir otra distancia la pista se recarga: la cancion sigue donde iba.
+# NUEVO - Lista Canciones: en cada carrera sale una al azar, sin repetir la
+# de la carrera anterior. Archivo Musica es la que se repite sin parar: si otra
+# cancion de la lista se acaba, entra Archivo Musica para no quedar en silencio.
+# PESO: solo se carga la cancion que suena.
 
 export(String, FILE, "*.ogg, *.mp3") var archivo_musica = "res://Sonidos/Beneath_the_Bit.ogg"
+export(Array, String, FILE, "*.ogg, *.mp3") var lista_canciones = [ "res://Sonidos/Beneath_the_Bit.ogg", "res://Sonidos/Recta_Final.ogg" ]
 export var volumen_musica = 6.0             # volumen de esta musica (igual que MusicaCarrera)
 export var segundos_para_apagarse = 2.5     # cuanto tarda en apagarse al pulsar PARTIDA
 export var segundos_para_entrar = 1.5       # cuanto tarda en subir al abrir el juego
@@ -25,40 +30,47 @@ var _habia_pantalla = false
 var _publico = null
 var _jockey = null
 var _musica_carrera = null
+var _cancion_actual = ""
 
 func _ready():
 	# Tiene que sonar aunque el juego este en pausa.
 	pause_mode = Node.PAUSE_MODE_PROCESS
 	bus = "Musica"
-	var cancion = load(archivo_musica) if ResourceLoader.exists(archivo_musica) else null
-	if cancion == null:
-		print("[MusicaPrevia] ERROR: no encuentro la cancion en ", archivo_musica)
+	# Si la pista se recargo (se eligio otra distancia), sigue la misma cancion donde iba.
+	var ruta = ""
+	var desde_seg = 0.0
+	if Engine.has_meta("bdg_musica_previa_pos"):
+		desde_seg = Engine.get_meta("bdg_musica_previa_pos")
+		Engine.remove_meta("bdg_musica_previa_pos")
+		if Engine.has_meta("bdg_musica_previa_cancion"):
+			ruta = Engine.get_meta("bdg_musica_previa_cancion")
+			Engine.remove_meta("bdg_musica_previa_cancion")
+		_desde = volumen_musica
+		_t = segundos_para_entrar
+	# Carrera nueva: elige una cancion de la lista.
+	if ruta == "" or not ResourceLoader.exists(ruta):
+		ruta = _elegir_cancion()
+		desde_seg = 0.0
+	if not _poner_cancion(ruta):
+		print("[MusicaPrevia] ERROR: no encuentro la cancion en ", ruta)
 		set_process(false)
 		return
-	if cancion is AudioStreamOGGVorbis or cancion is AudioStreamMP3:
-		cancion.loop = true
-	stream = cancion
 	var escena = get_tree().current_scene if get_tree().current_scene else get_parent()
 	_pantalla = escena.find_node("PantallaInicio", true, false)
 	_habia_pantalla = _pantalla != null
 	_publico = escena.find_node("SonidoPublico", true, false)
 	_jockey = escena.find_node("Jockey", true, false)
 	_musica_carrera = escena.find_node("MusicaCarrera", true, false)
-	# Si la pista se recargo (se eligio otra distancia), sigue donde iba.
-	var desde_seg = 0.0
-	if Engine.has_meta("bdg_musica_previa_pos"):
-		desde_seg = Engine.get_meta("bdg_musica_previa_pos")
-		Engine.remove_meta("bdg_musica_previa_pos")
-		_desde = volumen_musica
-		_t = segundos_para_entrar
+	connect("finished", self, "_al_terminar")
 	volume_db = _desde
 	play(desde_seg)
-	print("[MusicaPrevia] sonando: ", archivo_musica, " | pantalla de inicio: ", _habia_pantalla)
+	print("[MusicaPrevia] pantalla de inicio: ", _habia_pantalla)
 
 func _exit_tree():
-	# Guarda por donde iba, para seguir igual si la pista se recarga.
+	# Guarda la cancion y por donde iba, para seguir igual si la pista se recarga.
 	if _estado == "antes" and playing and not stream_paused:
 		Engine.set_meta("bdg_musica_previa_pos", get_playback_position())
+		Engine.set_meta("bdg_musica_previa_cancion", _cancion_actual)
 
 func _process(delta):
 	_t += delta
@@ -97,6 +109,48 @@ func _process(delta):
 				volume_db = lerp(SILENCIO, volumen_musica, f)
 				if f >= 1.0 and _musica_carrera and _musica_carrera.playing:
 					_musica_carrera.stop()
+
+
+# NUEVO - Elige una cancion al azar de Lista Canciones, distinta a la de la
+# carrera anterior. Si la lista queda vacia, usa Archivo Musica.
+func _elegir_cancion() -> String:
+	var validas = []
+	for r in lista_canciones:
+		if typeof(r) == TYPE_STRING and r != "" and ResourceLoader.exists(r):
+			validas.append(r)
+	if validas.empty():
+		return archivo_musica
+	var anterior = ""
+	if Engine.has_meta("bdg_ultima_previa"):
+		anterior = Engine.get_meta("bdg_ultima_previa")
+	if validas.size() > 1 and validas.has(anterior):
+		validas.erase(anterior)
+	randomize()
+	var elegida = validas[randi() % validas.size()]
+	Engine.set_meta("bdg_ultima_previa", elegida)
+	return elegida
+
+
+# NUEVO - Carga la cancion. Archivo Musica se repite sin parar; las demas
+# suenan una sola vez. true = se pudo cargar.
+func _poner_cancion(ruta) -> bool:
+	var cancion = load(ruta) if ResourceLoader.exists(ruta) else null
+	if cancion == null:
+		return false
+	if cancion is AudioStreamOGGVorbis or cancion is AudioStreamMP3:
+		cancion.loop = (ruta == archivo_musica)
+	stream = cancion
+	_cancion_actual = ruta
+	print("[MusicaPrevia] sonando: ", ruta.get_file())
+	return true
+
+
+# NUEVO - Una cancion de la lista se acabo: entra Archivo Musica.
+func _al_terminar():
+	if _cancion_actual == archivo_musica:
+		return
+	if _poner_cancion(archivo_musica):
+		play()
 
 
 func _pasar_a(nuevo):

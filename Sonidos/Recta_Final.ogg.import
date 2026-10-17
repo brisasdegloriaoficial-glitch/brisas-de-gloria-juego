@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/Recta_Final.ogg-45f41cd7c4da4b3d0a3854f2b3c2e72e.oggstr"
+
+[deps]
+
+source_file="res://Sonidos/Recta_Final.ogg"
+dest_files=[ "res://.import/Recta_Final.ogg-45f41cd7c4da4b3d0a3854f2b3c2e72e.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

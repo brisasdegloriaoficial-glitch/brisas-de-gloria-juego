@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/BajoLaMirada_DelJuez.ogg-7c760f697e4dccb8d2134b62c8ec5085.oggstr"
+
+[deps]
+
+source_file="res://Sonidos/BajoLaMirada_DelJuez.ogg"
+dest_files=[ "res://.import/BajoLaMirada_DelJuez.ogg-7c760f697e4dccb8d2134b62c8ec5085.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

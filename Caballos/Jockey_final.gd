@@ -1,5 +1,6 @@
 extends Node
-# VERSION: el nivel solo cambia los ultimos 400 m de los rivales (tu caballo siempre al 100%) + ayuda tras 3 derrotas + JUGAR OTRA VEZ + NIVEL + META SUPERADA (9-oct-2026)
+# VERSION 16-oct: freno con su propio ancho, mas pegado a la baranda y tropezon.
+# (antes) VERSION: el nivel solo cambia los ultimos 400 m de los rivales (tu caballo siempre al 100%) + ayuda tras 3 derrotas + JUGAR OTRA VEZ + NIVEL + META SUPERADA (9-oct-2026)
 
 export var duracion_efecto = 2.0
 export var penalizacion_proporcion_duracion = 0.5
@@ -46,7 +47,11 @@ export var giro_velocidad = 40.0
 # tomar toda la velocidad de lado.
 export var suavidad_giro = 4.0
 var _velocidad_lateral = 0.0
-export var h_offset_minimo = 5.0
+# VALOR ASENTADO (16-oct): lo mas cerca que puede ir TU caballo de la
+# baranda de adentro. Los rivales van en 5 (Carril Baranda de GestorNivel);
+# tu vas mas pegado y puedes meterte por el hueco. Cada 1 = medio metro.
+# Si la pierna del jinete se mete en la baranda, subelo a 1.
+export var h_offset_minimo = 0.0
 export var h_offset_maximo = 170.0
 
 # --- Choques entre caballos ------------------------------------
@@ -65,7 +70,40 @@ export var impedir_atravesarse = true
 # el EXE (lo que se mueve en el panel F1 solo se guarda en esta
 # computadora, y en ella manda el panel).
 # Ancho del caballo: si dos van mas cerca que esto de costado, se tocan.
-export var ancho_del_caballo = 8.0
+# VALOR ASENTADO (2-oct): 5. No volver a 8.
+export var ancho_del_caballo = 5.0
+# NUEVO - Ancho para frenar: el freno de avance solo te detiene detras de
+# un caballo si van casi en el mismo carril (menos que esto de costado).
+# Antes usaba Ancho Del Caballo y te dejaba clavado a la mitad del rival
+# de tu izquierda aunque hubiera espacio para pasar.
+# Mas bajo = pasas mas pegado; mas alto = te frena aunque vayas mas al costado.
+# No lo subas de 3 (en la gatera los caballos van a 3 uno del otro).
+export var ancho_para_frenar = 2.5
+
+# --- TROPEZON (NUEVO 16-oct) -----------------------------------
+# Cuando tu caballo roza o aparta a un rival se siente el golpe: el
+# telefono vibra (y el control, si hay uno conectado a la PC), la
+# camara tiembla un poquito y suena un golpecito.
+# Desmarcar = sin tropezon.
+export var sentir_tropezon = true
+# De costado, a menos de esto de un rival que va a tu lado, cuenta como
+# roce. Mas alto = tropieza mas seguido; mas bajo = solo cuando se pegan mucho.
+export var distancia_roce = 5.5
+# Milisegundos que vibra el telefono o el control (0 = no vibra).
+export var vibracion_ms = 120
+# Cuanto tiembla la camara (0 = no tiembla) y cuantos segundos dura.
+export var temblor_camara = 0.25
+export var duracion_temblor = 0.25
+# Sonido del golpecito (vacio = sin sonido) y su volumen.
+export(String, FILE, "*.ogg, *.wav") var sonido_tropezon = "res://Sonidos/Tropezon.ogg"
+export var volumen_tropezon = -4.0
+# Segundos minimos entre un tropezon y otro, para que no vibre sin parar.
+export var pausa_entre_tropezones = 0.8
+var _tocando = {}
+var _espera_tropezon = 0.0
+var _tiempo_temblor = 0.0
+var _cam_temblor = null
+var _sonido_tropezon = null
 # Largo del caballo: cuanto puede acercarse el de atras al de adelante.
 export var largo_del_caballo = 9.0
 # Separacion que buscan los rivales entre ellos cuando corren juntos.
@@ -452,7 +490,7 @@ func _aplicar_margen_photo_finish():
 func _aplicar_ajustes_de_choque():
 	if GestorNivel == null:
 		return
-	GestorNivel.distancia_frenado_lateral = ancho_del_caballo
+	GestorNivel.distancia_frenado_lateral = ancho_para_frenar
 	GestorNivel.distancia_frenado_longitudinal = largo_del_caballo
 	GestorNivel.distancia_minima_lateral = separacion_entre_caballos
 	GestorNivel.velocidad_maxima_retroceso = retroceso_maximo_freno
@@ -809,6 +847,7 @@ func _process(delta):
 		_actualizar_ritmo_rivales()
 		_limitar_escapada(delta)
 		_impedir_atravesarse()
+		_revisar_tropezon(delta)
 		_actualizar_paneles_derecha()
 		return
 	_actualizar_efectos_temporales(delta)
@@ -823,6 +862,7 @@ func _process(delta):
 	_actualizar_ritmo_rivales()
 	_limitar_escapada(delta)
 	_impedir_atravesarse()
+	_revisar_tropezon(delta)
 	_actualizar_paneles_derecha()
 
 
@@ -1111,7 +1151,7 @@ func _impedir_atravesarse():
 			if not _h_previo.has(hijo):
 				_h_previo[hijo] = hijo.h_offset
 
-	var ancho = GestorNivel.distancia_frenado_lateral
+	var ancho = ancho_del_caballo
 	var largo = GestorNivel.distancia_frenado_longitudinal
 	var h = {}
 	for c in caballos:
@@ -1150,6 +1190,90 @@ func _impedir_atravesarse():
 		if abs(h[c] - c.h_offset) > 0.001:
 			_mover_de_lado(c, h[c])
 		_h_previo[c] = c.h_offset
+
+
+# ------------------------------------------------------------
+# TROPEZON (NUEVO 16-oct)
+# ------------------------------------------------------------
+# Cuando un rival queda pegado a tu lado (menos de Distancia Roce de
+# costado y lado a lado), se dispara una sola vez: vibra, tiembla la
+# camara y suena el golpecito. Para que vuelva a sonar con ese mismo
+# rival, primero se tienen que despegar.
+func _revisar_tropezon(delta):
+	_actualizar_temblor(delta)
+	if _espera_tropezon > 0.0:
+		_espera_tropezon -= delta
+	if not sentir_tropezon or enrutador == null or GestorNivel == null:
+		return
+	var camino = enrutador.get_parent()
+	if camino == null or not ("curve" in camino) or camino.curve == null:
+		return
+	var largo_pista = camino.curve.get_baked_length()
+	if largo_pista <= 0.0:
+		return
+	# En la gatera todos van pegados: eso no cuenta como tropezon.
+	var en_carrera = enrutador.is_processing() and not carrera_terminada
+	var largo = GestorNivel.distancia_frenado_longitudinal
+	var tocando_ahora = {}
+	for c in camino.get_children():
+		if c == enrutador or not (c is PathFollow) or not c.name.begins_with("Enrutador_Caballo"):
+			continue
+		var d = fposmod(c.offset - enrutador.offset + largo_pista * 0.5, largo_pista) - largo_pista * 0.5
+		if abs(d) >= largo:
+			continue
+		if abs(c.h_offset - enrutador.h_offset) >= distancia_roce:
+			continue
+		tocando_ahora[c] = true
+		if en_carrera and not _tocando.has(c) and _espera_tropezon <= 0.0:
+			_tropezon()
+	_tocando = tocando_ahora
+
+
+func _tropezon():
+	_espera_tropezon = pausa_entre_tropezones
+	if vibracion_ms > 0:
+		# Solo en el telefono (en la PC la vibracion es la del control).
+		if OS.get_name() == "Android" or OS.get_name() == "iOS":
+			Input.vibrate_handheld(vibracion_ms)
+		for mando in Input.get_connected_joypads():
+			Input.start_joy_vibration(mando, 0.6, 1.0, vibracion_ms / 1000.0)
+	if temblor_camara > 0.0 and duracion_temblor > 0.0:
+		_tiempo_temblor = duracion_temblor
+	if sonido_tropezon == "":
+		return
+	if _sonido_tropezon == null and ResourceLoader.exists(sonido_tropezon):
+		var stream = load(sonido_tropezon)
+		if stream and ("loop" in stream):
+			stream.loop = false
+		_sonido_tropezon = AudioStreamPlayer.new()
+		_sonido_tropezon.stream = stream
+		add_child(_sonido_tropezon)
+	if _sonido_tropezon:
+		_sonido_tropezon.volume_db = volumen_tropezon
+		_sonido_tropezon.pitch_scale = rand_range(0.9, 1.1)
+		_sonido_tropezon.play()
+
+
+# La camara que se este viendo tiembla un poquito y vuelve sola a su sitio.
+func _actualizar_temblor(delta):
+	if _tiempo_temblor <= 0.0 and _cam_temblor == null:
+		return
+	var cam = get_viewport().get_camera()
+	if _cam_temblor != null and _cam_temblor != cam and is_instance_valid(_cam_temblor):
+		_cam_temblor.h_offset = 0.0
+		_cam_temblor.v_offset = 0.0
+	_cam_temblor = cam
+	if cam == null:
+		return
+	_tiempo_temblor -= delta
+	if _tiempo_temblor <= 0.0:
+		cam.h_offset = 0.0
+		cam.v_offset = 0.0
+		_cam_temblor = null
+		return
+	var f = temblor_camara * _tiempo_temblor / max(duracion_temblor, 0.01)
+	cam.h_offset = rand_range(-f, f)
+	cam.v_offset = rand_range(-f, f)
 
 
 # ------------------------------------------------------------

@@ -75,6 +75,10 @@ export var color_aro_logo = Color("d4af37")
 # NUEVO - Inclina el logo sobre un talud de cesped, de frente a la recta
 # de la meta, para que se lea desde la pista. 0 = plano como antes.
 export var inclinar_logo = 20.0
+# NUEVO - Sin palmeras ni arboles delante del logo: desde el talud hasta
+# el borde del jardin que da a la recta de la meta, para que nada lo tape
+# en la toma de llegada. Desmarcar = como antes.
+export var despejar_frente_al_logo = true
 # NUEVO - Brillo del logo BDG (cesped y monumento). 1 = como la imagen,
 # mas alto = mas luminoso (1.3 recomendado).
 export var brillo_logo = 1.3
@@ -106,6 +110,7 @@ export var color_tierra = Color("5d4037")
 var _firma = ""
 var _reloj = 0.0
 var _ocupados = []
+var _zona_logo = null
 
 
 func _ready():
@@ -204,6 +209,7 @@ func _rect_local(caja, t_jardin):
 func _construir(raiz, W, D, libre, mats):
 	var s = {}
 	_ocupados = []
+	_zona_logo = null
 	var rng = RandomNumberGenerator.new()
 	rng.seed = semilla
 	var mx = W * 0.5
@@ -394,7 +400,7 @@ func _construir(raiz, W, D, libre, mats):
 			if _libre(p, ra * 0.5, limites):
 				var clave = "copa_a" if alterna % 2 == 0 else "copa_b"
 				alterna += 1
-			_palmera(s, Vector3(p.x, yc, p.y), alto_palmera * rng.randf_range(0.9, 1.1), rng)
+				_palmera(s, Vector3(p.x, yc, p.y), alto_palmera * rng.randf_range(0.9, 1.1), rng)
 			
 
 	for clave in s.keys():
@@ -435,6 +441,11 @@ func _libre(p, r, lim):
 			return false
 	for o in _ocupados:
 		if o[0].distance_to(p) < o[1] + r:
+			return false
+	# NUEVO - Nada delante del logo (ni encima del talud).
+	if _zona_logo != null:
+		var d = (p - _zona_logo[0]).rotated(_zona_logo[1])
+		if abs(d.x) < _zona_logo[2] + r and d.y > -_zona_logo[3] - r and d.y < _zona_logo[4] + r:
 			return false
 	return true
 
@@ -670,6 +681,11 @@ func _logo_inclinado(s, mats, yc):
 			_quad(st_a, ca + d0 * r0, ca + d1 * r0, ca + d1 * r1, ca + d0 * r1, n)
 	_ocupados.append([Vector2(logo_x, logo_z), hb + 3.0])
 	_ocupados.append([Vector2(logo_x, logo_z) + Vector2(atras.x, atras.z) * (hb + fondo * 0.5), hb])
+	# NUEVO - Franja libre: todo el talud y, si Despejar Frente Al Logo esta
+	# marcado, todo lo que hay delante hasta el borde del jardin (lado de la meta).
+	# El ancho lleva 4 m de mas por las hojas de las palmeras.
+	var frente = 1000.0 if despejar_frente_al_logo else 0.0
+	_zona_logo = [Vector2(logo_x, logo_z), deg2rad(giro_logo), hb + 4.0, hb * cos(inc) + fondo, hb * cos(inc) + frente]
 
 
 func _arbol(s, base, tam, clave_copa):

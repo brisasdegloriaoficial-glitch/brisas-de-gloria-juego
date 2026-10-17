@@ -6,6 +6,9 @@ extends CanvasLayer
 # Pone el boton UNIFORME al lado de PAUSAR. Al tocarlo se abre un
 # panel para elegir los colores y los dibujos de la chaquetilla del
 # jinete del jugador (Enrutador_Caballo1).
+# NUEVO: el panel muestra arriba el JINETE completo (gorra, chaquetilla y
+# mangas) con todas sus opciones al lado, y abajo el CABALLO con su raza y
+# su pelaje al lado. Todo con figuras dibujadas por el juego (no pesan).
 # Lo elegido se guarda en user://sedas_bdg.cfg, asi no se pierde al
 # cambiar de distancia ni al cerrar el juego.
 # IMPORTANTE: este panel NUNCA toca la pausa. Abrirlo o cerrarlo no
@@ -17,12 +20,28 @@ extends CanvasLayer
 
 # ---------- Boton UNIFORME (todo ajustable desde el Inspector) ----------
 export var texto_boton_uniforme = "UNIFORME"
-export var ancho_boton_uniforme = 105
-export var alto_boton_uniforme = 30
-# PAUSAR empieza a 220 del borde derecho; con 330 este boton queda
-# justo a su izquierda.
-export var distancia_borde_derecho = 330
-export var distancia_borde_arriba = 8
+export var ancho_boton_uniforme = 150
+export var alto_boton_uniforme = 40
+# PAUSAR empieza a 220 del borde derecho; con 380 este boton queda
+# justo a su izquierda (si lo agrandas, sube tambien este numero).
+export var distancia_borde_derecho = 380
+export var distancia_borde_arriba = 6
+# NUEVO - Boton bien llamativo: colores, figurita del uniforme y latido.
+export var color_boton_uniforme = Color("ffd100")
+export var color_letra_boton_uniforme = Color("6d1a2a")
+# VALOR ASENTADO (16-oct): borde vino tinto, como la letra.
+export var color_borde_boton_uniforme = Color("6d1a2a")
+export var grosor_borde_boton_uniforme = 3
+export var tamano_letra_boton_uniforme = 18
+export var figura_en_boton_uniforme = true
+# NUEVO 16-oct - La figurita del boton va en azul y negro, para que resalte
+# sobre el amarillo. Desmarcar = lleva los colores de tu uniforme.
+export var figura_boton_azul_negro = true
+export var color_figura_boton_uniforme = Color("222988")    # chaquetilla y mangas
+export var color_contorno_figura_boton = Color("1c1c1c")   # gorra y bordes
+export var latido_boton_uniforme = true    # crece y se achica un poquito para llamar la atencion
+export var fuerza_latido = 0.07            # cuanto crece (0.07 = 7 %)
+export var velocidad_latido = 1.2          # latidos por segundo
 
 # ---------- Panel ----------
 export var ancho_panel_uniforme = 800
@@ -32,12 +51,19 @@ export var color_dorado = Color("c4a159")
 export var color_velo = Color(0, 0, 0, 0.5)
 export var tamano_titulo_panel = 26
 export var tamano_textos = 16
-export var tamano_botones_dibujo = 14
-export var ancho_boton_dibujo = 96
-export var alto_boton_dibujo = 26
-export var lado_muestra = 26
+export var lado_muestra = 30
 export var separacion_muestras = 5
-export var lado_vista_previa = 120
+# ---------- Figuras del panel (NUEVO) ----------
+export var lado_figura_grande = 140        # figura grande del jinete y del caballo
+export var ancho_icono = 70                # botones con figura: dibujos, mangas y razas
+export var alto_icono = 64
+export var ancho_icono_pelaje = 46         # botones de pelaje
+export var alto_icono_pelaje = 60
+export var alto_pestana = 38               # pestanas DIBUJO, COLORES, MANGAS, GORRA
+export var tamano_letra_titulos = 13
+export var tamano_letra_iconos = 12
+export var tamano_letra_pelaje = 10
+export var grosor_linea = 1.5              # borde dorado de las figuras
 
 # ---------- Probador 3D (tu caballo y tu jinete girando) ----------
 export var probador_3d = false
@@ -68,14 +94,14 @@ export var color_gorra_inicial = Color("6d1a2a")
 
 # ---------- Raza del caballo del jugador ----------
 # Al cambiar la raza y darle LISTO, la pista se vuelve a cargar con el caballo nuevo.
-export var ofrecer_cuartomilla = false
-export var ofrecer_ingles = false
+export var ofrecer_cuartomilla = true
+export var ofrecer_ingles = true
 export var nombre_repartidor = "RepartidorCaballos"
 
 # ---------- Pelaje del caballo del jugador ----------
 # Los pelajes salen de la lista del nodo Pelajes (mismo orden).
 export var nombre_pelajes = "Pelajes"
-export var columnas_pelaje = 6
+export var columnas_pelaje = 11
 
 # ---------- Jinete del jugador ----------
 export var nombre_caballo_jugador = "Enrutador_Caballo1"
@@ -85,7 +111,7 @@ const RUTA_GUARDADO = "user://sedas_bdg_v2.cfg"
 const DIBUJOS_CHAQUETILLA = ["Liso", "Aros", "Franjas", "Banda cruzada", "Cuartos", "Mitades",
 	"Rombos", "Lunares", "Estrellas", "Estrella grande", "Cheurones", "Cruz"]
 const DIBUJOS_MANGAS = ["Lisas", "Aros", "Puños", "Hombros"]
-const RAZAS = [["americano", "Americano"], ["arabe", "Árabe"], ["cuartomilla", "Cuarto de Milla"], ["ingles", "Inglés"]]
+const RAZAS = [["americano", "Americano"], ["arabe", "Árabe"], ["cuartomilla", "Cuarto de Milla"], ["ingles", "Patilargo"]]
 
 # Copia del dibujo del jinete, pero en plano, para la vista previa.
 const CODIGO_VISTA = """
@@ -128,6 +154,21 @@ void fragment() {
 }
 """
 
+# Figuras que dibuja el propio juego (sin imagenes, no pesan).
+# Chaquetilla de frente en un espacio de 100 x 100: cuerpo y mangas por separado.
+const CUERPO = [Vector2(35, 12), Vector2(50, 19), Vector2(65, 12), Vector2(78, 19), Vector2(78, 92), Vector2(22, 92), Vector2(22, 19)]
+const MANGA_I = [Vector2(22, 19), Vector2(12, 22), Vector2(2, 56), Vector2(14, 61), Vector2(22, 40)]
+const MANGA_D = [Vector2(78, 19), Vector2(88, 22), Vector2(98, 56), Vector2(86, 61), Vector2(78, 40)]
+# En la manga, el dibujo va del hombro (0) al puno (1).
+const UV_MANGA = [Vector2(0, 0), Vector2(0.1, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]
+const CUELLO = [Vector2(42, 15), Vector2(50, 24), Vector2(58, 15)]
+# Gorra de lado (casquete y visera).
+const CASQUETE = [Vector2(14.0, 66.0), Vector2(14.3, 53.4), Vector2(16.6, 42.7), Vector2(20.6, 33.7), Vector2(26.0, 26.5), Vector2(32.5, 21.0), Vector2(39.9, 17.1), Vector2(47.8, 14.8), Vector2(56.0, 14.0), Vector2(64.4, 14.9), Vector2(71.7, 17.6), Vector2(77.8, 21.9), Vector2(82.8, 27.8), Vector2(86.4, 35.0), Vector2(88.9, 43.5), Vector2(90.1, 53.2), Vector2(90.0, 64.0)]
+const VISERA = [Vector2(86.0, 60.0), Vector2(91.2, 60.5), Vector2(96.9, 61.8), Vector2(102.6, 63.9), Vector2(107.8, 66.7), Vector2(112.0, 70.0), Vector2(104.8, 71.7), Vector2(97.9, 72.2), Vector2(91.3, 71.6), Vector2(85.2, 70.1), Vector2(80.0, 68.0)]
+# Caballo de lado, en un espacio de 24 x 24 (silueta de Pictogrammers,
+# licencia libre Apache 2.0: se puede usar en un juego comercial).
+const CABALLO = [Vector2(22.0, 6.0), Vector2(22.0, 9.5), Vector2(20.5, 10.0), Vector2(18.96, 7.54), Vector2(18.86, 7.45), Vector2(18.74, 7.42), Vector2(18.62, 7.46), Vector2(18.54, 7.54), Vector2(18.5, 7.67), Vector2(18.5, 11.25), Vector2(18.45, 11.83), Vector2(18.32, 12.37), Vector2(18.12, 12.88), Vector2(17.84, 13.35), Vector2(17.5, 13.78), Vector2(17.5, 21.0), Vector2(15.0, 21.0), Vector2(15.0, 15.0), Vector2(14.95, 15.0), Vector2(14.9, 15.0), Vector2(14.85, 15.0), Vector2(14.8, 15.0), Vector2(14.75, 15.0), Vector2(14.62, 15.0), Vector2(14.5, 14.99), Vector2(14.37, 14.97), Vector2(14.25, 14.96), Vector2(14.13, 14.94), Vector2(9.69, 14.2), Vector2(8.57, 16.21), Vector2(9.53, 21.0), Vector2(7.0, 21.0), Vector2(6.0, 16.25), Vector2(5.99, 16.07), Vector2(6.0, 15.89), Vector2(6.03, 15.72), Vector2(6.08, 15.55), Vector2(6.16, 15.39), Vector2(7.18, 13.58), Vector2(6.63, 13.19), Vector2(6.17, 12.71), Vector2(5.82, 12.14), Vector2(5.59, 11.5), Vector2(5.5, 10.81), Vector2(5.48, 10.91), Vector2(5.46, 11.03), Vector2(5.46, 11.16), Vector2(5.46, 11.32), Vector2(5.47, 11.5), Vector2(5.5, 11.79), Vector2(5.53, 12.12), Vector2(5.55, 12.49), Vector2(5.56, 12.89), Vector2(5.54, 13.31), Vector2(5.48, 13.74), Vector2(5.37, 14.17), Vector2(5.2, 14.57), Vector2(4.99, 14.94), Vector2(4.75, 15.26), Vector2(4.49, 15.54), Vector2(4.22, 15.78), Vector2(3.93, 16.0), Vector2(3.65, 16.18), Vector2(3.35, 16.35), Vector2(2.65, 15.65), Vector2(2.76, 15.37), Vector2(2.87, 15.11), Vector2(2.96, 14.85), Vector2(3.03, 14.61), Vector2(3.07, 14.37), Vector2(3.09, 14.16), Vector2(3.09, 13.96), Vector2(3.06, 13.77), Vector2(3.01, 13.6), Vector2(2.95, 13.43), Vector2(2.42, 12.3), Vector2(2.29, 11.97), Vector2(2.17, 11.58), Vector2(2.07, 11.16), Vector2(2.0, 10.69), Vector2(2.0, 10.18), Vector2(2.07, 9.64), Vector2(2.25, 9.08), Vector2(2.52, 8.53), Vector2(2.91, 8.03), Vector2(3.39, 7.61), Vector2(3.94, 7.31), Vector2(4.49, 7.11), Vector2(5.03, 7.02), Vector2(5.56, 7.02), Vector2(6.05, 7.08), Vector2(6.35, 7.16), Vector2(6.65, 7.26), Vector2(6.94, 7.4), Vector2(7.23, 7.57), Vector2(7.5, 7.76), Vector2(7.73, 7.67), Vector2(7.97, 7.6), Vector2(8.22, 7.54), Vector2(8.48, 7.51), Vector2(8.75, 7.5), Vector2(14.5, 7.5), Vector2(14.5, 7.0), Vector2(14.7, 5.74), Vector2(15.27, 4.64), Vector2(16.14, 3.77), Vector2(17.24, 3.2), Vector2(18.5, 3.0), Vector2(22.0, 3.0), Vector2(21.11, 4.34), Vector2(21.41, 4.58), Vector2(21.66, 4.88), Vector2(21.84, 5.22), Vector2(21.96, 5.6)]
+
 var _color_principal = Color("6d1a2a")
 var _color_diseno = Color("d4af37")
 var _color_gorra = Color("6d1a2a")
@@ -143,9 +184,13 @@ var _dibujo_mangas = 0
 
 var _boton_uniforme = null
 var _velo = null
-var _vista_chaquetilla = null
-var _vista_mangas = null
-var _vista_casco = null
+var _pestana = 0
+var _botones_pestana = []
+var _paginas = []
+var _figuras = []
+var _caballos_fig = []
+var _textura_blanca = null
+var _t_latido = 0.0
 var _muestras = {1: [], 2: [], 3: []}
 var _botones_chaquetilla = []
 var _botones_mangas = []
@@ -197,6 +242,13 @@ func _process(delta):
 		set_process(false)
 		return
 	_girar_probador(delta)
+	# NUEVO - el boton UNIFORME late para que nadie deje de verlo.
+	if latido_boton_uniforme and _boton_uniforme.visible and not _velo.visible:
+		_t_latido += delta
+		var s = 1.0 + fuerza_latido * (0.5 + 0.5 * sin(_t_latido * velocidad_latido * TAU))
+		_boton_uniforme.rect_scale = Vector2(s, s)
+	else:
+		_boton_uniforme.rect_scale = Vector2.ONE
 
 
 # ------------------------------------------------------------
@@ -205,16 +257,50 @@ func _process(delta):
 func _crear_boton_uniforme():
 	var tam = get_viewport().get_visible_rect().size
 	_boton_uniforme = Button.new()
-	_boton_uniforme.text = texto_boton_uniforme
 	_boton_uniforme.focus_mode = Control.FOCUS_NONE
 	_boton_uniforme.rect_size = Vector2(ancho_boton_uniforme, alto_boton_uniforme)
 	_boton_uniforme.rect_position = Vector2(tam.x - distancia_borde_derecho, distancia_borde_arriba)
+	_boton_uniforme.rect_pivot_offset = _boton_uniforme.rect_size / 2.0
 	_boton_uniforme.connect("pressed", self, "_abrir")
 	add_child(_boton_uniforme)
+	# NUEVO - fondo llamativo, borde y sombrita.
+	var e = _estilo(color_boton_uniforme, color_borde_boton_uniforme, grosor_borde_boton_uniforme, 8)
+	e.shadow_color = Color(0, 0, 0, 0.45)
+	e.shadow_size = 4
+	for estado in ["normal", "hover", "pressed", "disabled", "focus"]:
+		_boton_uniforme.add_stylebox_override(estado, e)
+	var caja = HBoxContainer.new()
+	caja.anchor_right = 1
+	caja.anchor_bottom = 1
+	caja.alignment = BoxContainer.ALIGN_CENTER
+	caja.add_constant_override("separation", 6)
+	caja.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_boton_uniforme.add_child(caja)
+	# NUEVO - figurita del uniforme con tus colores.
+	if figura_en_boton_uniforme:
+		var lado = alto_boton_uniforme - 6
+		var fig = _figura_jinete(Vector2(lado * 0.8, lado), true, "vista", 0)
+		fig.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		caja.add_child(fig)
+		if figura_boton_azul_negro:
+			# Se saca de la lista para que no la pinten con tus colores.
+			var datos = _figuras.pop_back()
+			_pintar_figura(fig, color_figura_boton_uniforme, color_contorno_figura_boton)
+			for g in datos["gorra"]:
+				g.color = color_contorno_figura_boton
+	var l = Label.new()
+	l.text = texto_boton_uniforme
+	l.valign = Label.VALIGN_CENTER
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.add_color_override("font_color", color_letra_boton_uniforme)
+	l.add_color_override("font_outline_modulate", Color(0, 0, 0, 0))
+	caja.add_child(l)
+	_letra(l, tamano_letra_boton_uniforme)
 
 
 # ------------------------------------------------------------
-# Panel
+# Panel: arriba el JINETE con todas sus opciones al lado (Dibujo,
+# Colores, Mangas, Gorra); abajo el CABALLO con raza y pelaje al lado.
 # ------------------------------------------------------------
 func _crear_panel():
 	_velo = ColorRect.new()
@@ -240,139 +326,171 @@ func _crear_panel():
 	var margen = MarginContainer.new()
 	margen.anchor_right = 1
 	margen.anchor_bottom = 1
-	margen.add_constant_override("margin_left", 22)
-	margen.add_constant_override("margin_right", 22)
-	margen.add_constant_override("margin_top", 12)
-	margen.add_constant_override("margin_bottom", 14)
+	margen.add_constant_override("margin_left", 16)
+	margen.add_constant_override("margin_right", 16)
+	margen.add_constant_override("margin_top", 8)
+	margen.add_constant_override("margin_bottom", 12)
 	panel.add_child(margen)
 
 	var columna = VBoxContainer.new()
-	columna.add_constant_override("separation", 10)
+	columna.add_constant_override("separation", 8)
 	margen.add_child(columna)
 
-	var titulo = _texto(columna, "UNIFORME", tamano_titulo_panel)
+	# --- Arriba: titulo, AL AZAR y LISTO ---
+	var arriba = HBoxContainer.new()
+	arriba.add_constant_override("separation", 10)
+	columna.add_child(arriba)
+	var hueco = Control.new()
+	hueco.rect_min_size = Vector2(230, 0)
+	hueco.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	arriba.add_child(hueco)
+	var titulo = _texto(arriba, "UNIFORME", tamano_titulo_panel)
 	titulo.align = Label.ALIGN_CENTER
+	titulo.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var boton_azar = _boton_final(arriba, "AL AZAR", false)
+	boton_azar.connect("pressed", self, "_al_azar")
+	var boton_listo = _boton_final(arriba, "LISTO", true)
+	boton_listo.connect("pressed", self, "_cerrar")
 
-	var fila = HBoxContainer.new()
-	fila.add_constant_override("separation", 26)
-	fila.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	columna.add_child(fila)
+	# --- El jinete y sus opciones ---
+	var opciones_j = _bloque(columna, "JINETE", true)
+	var fila_pestanas = HBoxContainer.new()
+	fila_pestanas.add_constant_override("separation", 6)
+	opciones_j.add_child(fila_pestanas)
+	var iconos_pestana = [
+		_figura_jinete(Vector2(28, 26), false, "dibujo", 1),
+		_figura_jinete(Vector2(28, 26), false, "plana", 0),
+		_figura_jinete(Vector2(28, 26), false, "manga", 1),
+		_figura_gorra(Vector2(32, 22))]
+	var nombres_pestana = ["DIBUJO", "COLORES", "MANGAS", "GORRA"]
+	for i in nombres_pestana.size():
+		var b = _boton_pestana(fila_pestanas, iconos_pestana[i], nombres_pestana[i])
+		b.connect("pressed", self, "_elegir_pestana", [i])
 
-	# --- Izquierda: vista previa ---
-	var izquierda = VBoxContainer.new()
-	izquierda.add_constant_override("separation", 8)
-	fila.add_child(izquierda)
-	if probador_3d:
-		_crear_contenedor_probador(izquierda)
-		var texto_probador = _texto(izquierda, "ARRASTRA PARA GIRAR", tamano_botones_dibujo)
-		texto_probador.align = Label.ALIGN_CENTER
-	else:
-		_vista_chaquetilla = _crear_vista(izquierda, Vector2(lado_vista_previa, lado_vista_previa), false)
-		var texto_vista = _texto(izquierda, "VISTA PREVIA", tamano_botones_dibujo)
-		texto_vista.align = Label.ALIGN_CENTER
-
-		var fila_mangas = HBoxContainer.new()
-		izquierda.add_child(fila_mangas)
-		_texto(fila_mangas, "Mangas", tamano_botones_dibujo).rect_min_size.x = 64
-		_vista_mangas = _crear_vista(fila_mangas, Vector2(lado_vista_previa - 70, 18), true)
-	_texto(izquierda, "GORRA", tamano_textos)
-	_crear_muestras(izquierda, 3, 7)
-	_texto_pelaje = _texto(izquierda, "PELAJE", tamano_textos)
-	var rejilla_pelaje = GridContainer.new()
-	rejilla_pelaje.columns = columnas_pelaje
-	rejilla_pelaje.add_constant_override("hseparation", separacion_muestras)
-	rejilla_pelaje.add_constant_override("vseparation", separacion_muestras)
-	izquierda.add_child(rejilla_pelaje)
-	var colores_pelaje = _lista_pelajes("COLORES")
-	for i in colores_pelaje.size():
-		var b = Button.new()
-		b.focus_mode = Control.FOCUS_NONE
-		b.rect_min_size = Vector2(lado_muestra, lado_muestra)
-		b.hint_tooltip = _lista_pelajes("NOMBRES")[i] if i < _lista_pelajes("NOMBRES").size() else ""
-		b.connect("pressed", self, "_elegir_pelaje", [i])
-		rejilla_pelaje.add_child(b)
-		_muestras_pelaje.append([b, Color(colores_pelaje[i])])
-
-	# --- Derecha: colores y dibujos ---
-	var derecha = VBoxContainer.new()
-	derecha.add_constant_override("separation", 6)
-	fila.add_child(derecha)
-
-	_texto(derecha, "COLOR PRINCIPAL", tamano_textos)
-	_crear_muestras(derecha, 1)
-	_texto(derecha, "COLOR DEL DISEÑO", tamano_textos)
-	_crear_muestras(derecha, 2)
-
-	_texto(derecha, "CHAQUETILLA", tamano_textos)
-	var rejilla = GridContainer.new()
-	rejilla.columns = 4
-	rejilla.add_constant_override("hseparation", 6)
-	rejilla.add_constant_override("vseparation", 4)
-	derecha.add_child(rejilla)
+	var pagina_dibujo = GridContainer.new()
+	pagina_dibujo.columns = 6
+	pagina_dibujo.add_constant_override("hseparation", 6)
+	pagina_dibujo.add_constant_override("vseparation", 6)
+	opciones_j.add_child(pagina_dibujo)
 	for i in DIBUJOS_CHAQUETILLA.size():
-		var b = _boton_dibujo(rejilla, DIBUJOS_CHAQUETILLA[i])
+		var b = _boton_icono(pagina_dibujo, _figura_jinete(Vector2(alto_icono, alto_icono - 20), false, "dibujo", i),
+			DIBUJOS_CHAQUETILLA[i], Vector2(ancho_icono, alto_icono), tamano_letra_iconos)
 		b.connect("pressed", self, "_elegir_chaquetilla", [i])
 		_botones_chaquetilla.append(b)
 
-	_texto(derecha, "MANGAS", tamano_textos)
-	var fila_botones_mangas = HBoxContainer.new()
-	fila_botones_mangas.add_constant_override("separation", 6)
-	derecha.add_child(fila_botones_mangas)
+	var pagina_colores = VBoxContainer.new()
+	pagina_colores.add_constant_override("separation", 4)
+	opciones_j.add_child(pagina_colores)
+	_texto(pagina_colores, "COLOR DE FONDO", tamano_letra_titulos)
+	_crear_muestras(pagina_colores, 1)
+	_texto(pagina_colores, "COLOR DEL DIBUJO", tamano_letra_titulos)
+	_crear_muestras(pagina_colores, 2)
+
+	var pagina_mangas = GridContainer.new()
+	pagina_mangas.columns = 6
+	pagina_mangas.add_constant_override("hseparation", 6)
+	opciones_j.add_child(pagina_mangas)
 	for i in DIBUJOS_MANGAS.size():
-		var b = _boton_dibujo(fila_botones_mangas, DIBUJOS_MANGAS[i])
+		var b = _boton_icono(pagina_mangas, _figura_jinete(Vector2(alto_icono, alto_icono - 20), false, "manga", i),
+			DIBUJOS_MANGAS[i], Vector2(ancho_icono, alto_icono), tamano_letra_iconos)
 		b.connect("pressed", self, "_elegir_mangas", [i])
 		_botones_mangas.append(b)
 
-	_texto(derecha, "RAZA DEL CABALLO", tamano_textos)
-	var fila_razas = HBoxContainer.new()
-	fila_razas.add_constant_override("separation", 6)
-	derecha.add_child(fila_razas)
+	var pagina_gorra = VBoxContainer.new()
+	pagina_gorra.add_constant_override("separation", 4)
+	opciones_j.add_child(pagina_gorra)
+	_texto(pagina_gorra, "COLOR DE LA GORRA", tamano_letra_titulos)
+	_crear_muestras(pagina_gorra, 3)
+	_paginas = [pagina_dibujo, pagina_colores, pagina_mangas, pagina_gorra]
+
+	# --- El caballo y sus opciones ---
+	var opciones_c = _bloque(columna, "CABALLO", false)
+	_texto(opciones_c, "RAZA", tamano_letra_titulos)
+	var fila_razas = GridContainer.new()
+	fila_razas.columns = 4
+	fila_razas.add_constant_override("hseparation", 6)
+	opciones_c.add_child(fila_razas)
 	for r in RAZAS:
 		if r[0] == "cuartomilla" and not ofrecer_cuartomilla:
 			continue
 		if r[0] == "ingles" and not ofrecer_ingles:
 			continue
-		var b = _boton_dibujo(fila_razas, r[1])
+		var b = _boton_icono(fila_razas, _figura_caballo(Vector2(alto_icono + 8, alto_icono - 18), "raza", 0, r[0]),
+			r[1], Vector2(ancho_icono, alto_icono), tamano_letra_iconos)
 		b.connect("pressed", self, "_elegir_raza", [r[0]])
 		_botones_raza.append(b)
 		_razas_ofrecidas.append(r[0])
 
-	# --- Abajo: AL AZAR y LISTO ---
-	var abajo = HBoxContainer.new()
-	abajo.alignment = BoxContainer.ALIGN_END
-	abajo.add_constant_override("separation", 12)
-	columna.add_child(abajo)
+	_texto_pelaje = _texto(opciones_c, "PELAJE", tamano_letra_titulos)
+	var fila_pelajes = GridContainer.new()
+	fila_pelajes.columns = columnas_pelaje
+	fila_pelajes.add_constant_override("hseparation", 4)
+	fila_pelajes.add_constant_override("vseparation", 4)
+	opciones_c.add_child(fila_pelajes)
+	var colores_pelaje = _lista_pelajes("COLORES")
+	var nombres_pelaje = _lista_pelajes("NOMBRES")
+	for i in colores_pelaje.size():
+		var nombre = str(nombres_pelaje[i]).capitalize() if i < nombres_pelaje.size() else ""
+		var b = _boton_icono(fila_pelajes, _figura_caballo(Vector2(ancho_icono_pelaje - 6, 30), "pelaje", i),
+			nombre, Vector2(ancho_icono_pelaje, alto_icono_pelaje), tamano_letra_pelaje)
+		b.connect("pressed", self, "_elegir_pelaje", [i])
+		_muestras_pelaje.append([b, Color(colores_pelaje[i])])
 
-	var boton_azar = _boton_final(abajo, "AL AZAR", false)
-	boton_azar.connect("pressed", self, "_al_azar")
-	var boton_listo = _boton_final(abajo, "LISTO", true)
-	boton_listo.connect("pressed", self, "_cerrar")
 
-
-func _crear_vista(padre, tam, es_manga):
+# Recuadro con la figura grande a la izquierda y sus opciones a la derecha.
+# Devuelve la columna de opciones.
+func _bloque(padre, titulo, es_jinete):
 	var marco = PanelContainer.new()
-	var borde = StyleBoxFlat.new()
-	borde.draw_center = false
-	borde.border_color = color_dorado
-	borde.set_border_width_all(2)
-	borde.content_margin_left = 2
-	borde.content_margin_right = 2
-	borde.content_margin_top = 2
-	borde.content_margin_bottom = 2
-	marco.add_stylebox_override("panel", borde)
-	marco.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	marco.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var e = StyleBoxFlat.new()
+	e.bg_color = Color(0, 0, 0, 0)
+	e.border_color = Color(color_dorado.r, color_dorado.g, color_dorado.b, 0.35)
+	e.set_border_width_all(1)
+	e.set_corner_radius_all(8)
+	e.content_margin_left = 8
+	e.content_margin_right = 8
+	e.content_margin_top = 6
+	e.content_margin_bottom = 6
+	marco.add_stylebox_override("panel", e)
+	# Los dos recuadros se reparten el alto: el panel no cambia de tamano al cambiar de pestana.
+	marco.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	marco.size_flags_stretch_ratio = 1.2 if es_jinete else 1.0
 	padre.add_child(marco)
 
-	var vista = ColorRect.new()
-	vista.rect_min_size = tam
-	vista.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var material_vista = ShaderMaterial.new()
-	material_vista.shader = _sombreador
-	material_vista.set_shader_param("manga", es_manga)
-	vista.material = material_vista
-	marco.add_child(vista)
-	return vista
+	var fila = HBoxContainer.new()
+	fila.add_constant_override("separation", 12)
+	marco.add_child(fila)
+
+	var tarjeta = VBoxContainer.new()
+	tarjeta.rect_min_size = Vector2(lado_figura_grande + 20, 0)
+	tarjeta.alignment = BoxContainer.ALIGN_CENTER
+	fila.add_child(tarjeta)
+	var figura = null
+	if es_jinete:
+		if probador_3d:
+			_crear_contenedor_probador(tarjeta)
+			var texto_probador = _texto(tarjeta, "ARRASTRA PARA GIRAR", tamano_letra_iconos)
+			texto_probador.align = Label.ALIGN_CENTER
+		else:
+			figura = _figura_jinete(Vector2(lado_figura_grande, lado_figura_grande), true, "vista", 0)
+	else:
+		figura = _figura_caballo(Vector2(lado_figura_grande, lado_figura_grande * 0.8), "grande", 0)
+	if figura != null:
+		figura.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		tarjeta.add_child(figura)
+	var nombre = _texto(tarjeta, titulo, tamano_textos + 2)
+	nombre.align = Label.ALIGN_CENTER
+
+	var raya = ColorRect.new()
+	raya.color = Color(color_dorado.r, color_dorado.g, color_dorado.b, 0.35)
+	raya.rect_min_size = Vector2(1, 0)
+	raya.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fila.add_child(raya)
+
+	var opciones = VBoxContainer.new()
+	opciones.add_constant_override("separation", 6)
+	opciones.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fila.add_child(opciones)
+	return opciones
 
 
 func _crear_muestras(padre, cual, columnas = 11):
@@ -390,14 +508,202 @@ func _crear_muestras(padre, cual, columnas = 11):
 		_muestras[cual].append([b, Color(codigo)])
 
 
-func _boton_dibujo(padre, texto):
+# Boton con una figura arriba y su nombre abajo.
+func _boton_icono(padre, figura, texto, tam, tam_letra):
 	var b = Button.new()
-	b.text = texto
 	b.focus_mode = Control.FOCUS_NONE
-	b.rect_min_size = Vector2(ancho_boton_dibujo, alto_boton_dibujo)
+	b.rect_min_size = tam
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	padre.add_child(b)
-	_letra(b, tamano_botones_dibujo)
+	var caja = VBoxContainer.new()
+	caja.anchor_right = 1
+	caja.anchor_bottom = 1
+	caja.alignment = BoxContainer.ALIGN_CENTER
+	caja.add_constant_override("separation", 0)
+	caja.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(caja)
+	figura.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	caja.add_child(figura)
+	if texto != "":
+		var l = Label.new()
+		l.text = texto
+		l.align = Label.ALIGN_CENTER
+		l.autowrap = true
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		l.add_color_override("font_color", color_dorado)
+		caja.add_child(l)
+		_letra(l, tam_letra)
+	_marcar_icono(b, false)
 	return b
+
+
+# Pestana: figura chica y nombre, uno al lado del otro.
+func _boton_pestana(padre, figura, texto):
+	var b = Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.rect_min_size = Vector2(0, alto_pestana)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	padre.add_child(b)
+	var caja = HBoxContainer.new()
+	caja.anchor_right = 1
+	caja.anchor_bottom = 1
+	caja.alignment = BoxContainer.ALIGN_CENTER
+	caja.add_constant_override("separation", 6)
+	caja.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(caja)
+	figura.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	caja.add_child(figura)
+	var l = Label.new()
+	l.text = texto
+	l.valign = Label.VALIGN_CENTER
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	caja.add_child(l)
+	_letra(l, tamano_textos)
+	_botones_pestana.append([b, l])
+	return b
+
+
+func _elegir_pestana(i):
+	_pestana = i
+	_refrescar()
+
+
+# ------------------------------------------------------------
+# Figuras dibujadas por el juego
+# ------------------------------------------------------------
+# Chaquetilla (con o sin gorra). tipo: "vista" (lo que llevas puesto),
+# "dibujo" (muestra el dibujo i), "manga" (muestra las mangas i), "plana".
+func _figura_jinete(tam, con_gorra, tipo, i):
+	var caja = Control.new()
+	caja.rect_min_size = tam
+	caja.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var dibujo = Node2D.new()
+	caja.add_child(dibujo)
+	var arriba = -36.0 if con_gorra else 4.0
+	var alto = 132.0 if con_gorra else 94.0
+	var esc = min(tam.x / 100.0, tam.y / alto)
+	dibujo.scale = Vector2(esc, esc)
+	dibujo.position = Vector2((tam.x - 100.0 * esc) / 2.0, (tam.y - alto * esc) / 2.0 - arriba * esc)
+	var fig = {"tipo": tipo, "i": i, "cuerpo": null, "mangas": [], "gorra": []}
+	for puntos in [MANGA_I, MANGA_D]:
+		fig["mangas"].append(_pieza(dibujo, puntos, UV_MANGA, true, esc))
+	var uv_cuerpo = []
+	for p in CUERPO:
+		uv_cuerpo.append(Vector2((p.x - 22.0) / 56.0, (p.y - 12.0) / 56.0))
+	fig["cuerpo"] = _pieza(dibujo, CUERPO, uv_cuerpo, false, esc)
+	_linea(dibujo, CUELLO, false, esc)
+	if con_gorra:
+		var g = Node2D.new()
+		g.position = Vector2(27, -34)
+		g.scale = Vector2(0.44, 0.44)
+		dibujo.add_child(g)
+		fig["gorra"] = _gorra_en(g, esc * 0.44)
+	_figuras.append(fig)
+	return caja
+
+
+# Solo la gorra (para la pestana GORRA).
+func _figura_gorra(tam):
+	var caja = Control.new()
+	caja.rect_min_size = tam
+	caja.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var g = Node2D.new()
+	var esc = min(tam.x / 108.0, tam.y / 66.0)
+	g.scale = Vector2(esc, esc)
+	g.position = Vector2((tam.x - 108.0 * esc) / 2.0 - 8.0 * esc, (tam.y - 66.0 * esc) / 2.0 - 10.0 * esc)
+	caja.add_child(g)
+	_figuras.append({"tipo": "gorra", "i": 0, "cuerpo": null, "mangas": [], "gorra": _gorra_en(g, esc)})
+	return caja
+
+
+func _gorra_en(padre, esc):
+	var partes = []
+	for puntos in [CASQUETE, VISERA]:
+		var p = Polygon2D.new()
+		p.polygon = PoolVector2Array(puntos)
+		p.antialiased = true
+		padre.add_child(p)
+		partes.append(p)
+		_linea(padre, puntos, true, esc)
+	return partes
+
+
+# Caballo de lado. tipo: "grande" y "raza" llevan tu pelaje; "pelaje" lleva el pelaje i.
+func _figura_caballo(tam, tipo, i, raza = ""):
+	var caja = Control.new()
+	caja.rect_min_size = tam
+	caja.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var dibujo = Node2D.new()
+	caja.add_child(dibujo)
+	# Cada raza con su porte: ancho y alto un poco distintos.
+	var forma = Vector2(1, 1)
+	if raza == "arabe":
+		forma = Vector2(0.96, 0.95)
+	elif raza == "cuartomilla":
+		forma = Vector2(1.05, 0.9)
+	elif raza == "ingles":
+		forma = Vector2(0.97, 1.07)
+	var esc = min(tam.x / 21.0, tam.y / 19.5)
+	dibujo.scale = Vector2(esc * forma.x, esc * forma.y)
+	dibujo.position = Vector2(tam.x / 2.0 - 12.0 * esc * forma.x, tam.y / 2.0 - 12.0 * esc * forma.y)
+	var p = Polygon2D.new()
+	p.polygon = PoolVector2Array(CABALLO)
+	p.antialiased = true
+	dibujo.add_child(p)
+	_linea(dibujo, CABALLO, true, esc)
+	_caballos_fig.append({"tipo": tipo, "i": i, "poly": p})
+	return caja
+
+
+# Una pieza de la chaquetilla, pintada con el mismo dibujo del jinete.
+func _pieza(padre, puntos, uvs, es_manga, esc):
+	var p = Polygon2D.new()
+	p.polygon = PoolVector2Array(puntos)
+	p.texture = _blanca()
+	p.uv = PoolVector2Array(uvs)
+	p.antialiased = true
+	var m = ShaderMaterial.new()
+	m.shader = _sombreador
+	m.set_shader_param("manga", es_manga)
+	p.material = m
+	padre.add_child(p)
+	_linea(padre, puntos, true, esc)
+	return m
+
+
+func _linea(padre, puntos, cerrada, esc):
+	var arr = PoolVector2Array(puntos)
+	if cerrada:
+		arr.append(puntos[0])
+	var l = Line2D.new()
+	l.points = arr
+	l.width = grosor_linea / max(esc, 0.01)
+	l.default_color = color_dorado
+	l.joint_mode = Line2D.LINE_JOINT_ROUND
+	l.antialiased = true
+	padre.add_child(l)
+
+
+# NUEVO 16-oct - Pinta una figurita: piezas de un color y bordes de otro.
+func _pintar_figura(nodo, relleno, borde):
+	for h in nodo.get_children():
+		if h is Polygon2D:
+			h.material = null
+			h.color = relleno
+		elif h is Line2D:
+			h.default_color = borde
+		_pintar_figura(h, relleno, borde)
+
+
+# Textura blanca de 1 x 1: le permite al dibujo saber en que parte de la pieza esta.
+func _blanca():
+	if _textura_blanca == null:
+		var img = Image.new()
+		img.create(1, 1, false, Image.FORMAT_RGBA8)
+		img.fill(Color(1, 1, 1))
+		_textura_blanca = ImageTexture.new()
+		_textura_blanca.create_from_image(img, 0)
+	return _textura_blanca
 
 
 func _boton_final(padre, texto, relleno):
@@ -409,6 +715,11 @@ func _boton_final(padre, texto, relleno):
 	_letra(b, tamano_textos + 1)
 	if relleno:
 		_pintar_boton(b, color_dorado, color_fondo_panel, 6)
+		# NUEVO - sin el contorno negro de la letra: sobre el dorado, la
+		# letra vino tinto se lee limpia.
+		var f = b.get_font("font")
+		if f is DynamicFont:
+			f.outline_size = 0
 	else:
 		_pintar_boton(b, color_fondo_panel, color_dorado, 6)
 	return b
@@ -510,36 +821,75 @@ func _refrescar():
 			for estado in ["normal", "hover", "pressed", "disabled", "focus"]:
 				par[0].add_stylebox_override(estado, e)
 	for i in _botones_chaquetilla.size():
-		_marcar(_botones_chaquetilla[i], i == _dibujo_chaquetilla)
+		_marcar_icono(_botones_chaquetilla[i], i == _dibujo_chaquetilla)
 	for i in _botones_mangas.size():
-		_marcar(_botones_mangas[i], i == _dibujo_mangas)
+		_marcar_icono(_botones_mangas[i], i == _dibujo_mangas)
 	for i in _botones_raza.size():
-		_marcar(_botones_raza[i], _razas_ofrecidas[i] == _raza)
+		_marcar_icono(_botones_raza[i], _razas_ofrecidas[i] == _raza)
 	for i in _muestras_pelaje.size():
-		var marcado_p = (i == _pelaje)
-		var borde_p = Color("ffffff") if marcado_p else Color("000000")
-		var e_p = _estilo(_muestras_pelaje[i][1], borde_p, 3 if marcado_p else 1, 0)
-		for estado in ["normal", "hover", "pressed", "disabled", "focus"]:
-			_muestras_pelaje[i][0].add_stylebox_override(estado, e_p)
+		_marcar_icono(_muestras_pelaje[i][0], i == _pelaje)
 	if _texto_pelaje != null:
 		var nombres_p = _lista_pelajes("NOMBRES")
 		if _pelaje >= 0 and _pelaje < nombres_p.size():
 			_texto_pelaje.text = "PELAJE: " + str(nombres_p[_pelaje]).to_upper()
-	var cantidad = _cantidad_del_jinete()
-	if _vista_chaquetilla != null:
-		_poner_vista(_vista_chaquetilla, _color_principal, _color_diseno, _dibujo_chaquetilla, cantidad)
-	if _vista_mangas != null:
-		if mangas_del_color_principal:
-			_poner_vista(_vista_mangas, _color_principal, _color_diseno, _dibujo_mangas, cantidad)
+	# Pestanas: solo se ve la pagina de la pestana escogida.
+	for i in _paginas.size():
+		_paginas[i].visible = (i == _pestana)
+	for i in _botones_pestana.size():
+		var b = _botones_pestana[i][0]
+		var l = _botones_pestana[i][1]
+		if i == _pestana:
+			var e = _estilo(color_dorado, color_dorado, 2, 6)
+			for estado in ["normal", "hover", "pressed", "disabled", "focus"]:
+				b.add_stylebox_override(estado, e)
+			l.add_color_override("font_color", color_fondo_panel)
+			l.add_color_override("font_outline_modulate", Color(0, 0, 0, 0))
 		else:
-			_poner_vista(_vista_mangas, _color_diseno, _color_principal, _dibujo_mangas, cantidad)
+			_marcar_icono(b, false)
+			l.add_color_override("font_color", color_dorado)
+			l.add_color_override("font_outline_modulate", Color(0, 0, 0, 1))
+	_refrescar_figuras()
 
 
-func _poner_vista(vista, c1, c2, dibujo, cantidad):
-	vista.material.set_shader_param("color_1", c1)
-	vista.material.set_shader_param("color_2", c2)
-	vista.material.set_shader_param("diseno", dibujo)
-	vista.material.set_shader_param("cantidad", cantidad)
+# Las figuras de la chaquetilla, la gorra y los caballos con lo elegido.
+func _refrescar_figuras():
+	var cantidad = _cantidad_del_jinete()
+	var manga_1 = _color_principal if mangas_del_color_principal else _color_diseno
+	var manga_2 = _color_diseno if mangas_del_color_principal else _color_principal
+	for f in _figuras:
+		var d_cuerpo = _dibujo_chaquetilla
+		var d_mangas = _dibujo_mangas
+		if f["tipo"] == "dibujo":
+			d_cuerpo = f["i"]
+			d_mangas = 0
+		elif f["tipo"] == "manga":
+			d_cuerpo = 0
+			d_mangas = f["i"]
+		elif f["tipo"] == "plana":
+			d_cuerpo = 0
+			d_mangas = 0
+		if f["cuerpo"] != null:
+			_poner_material(f["cuerpo"], _color_principal, _color_diseno, d_cuerpo, cantidad)
+		for m in f["mangas"]:
+			_poner_material(m, manga_1, manga_2, d_mangas, cantidad)
+		for g in f["gorra"]:
+			g.color = _color_gorra
+	var colores_p = _lista_pelajes("COLORES")
+	var tuyo = Color("ffffff")
+	if _pelaje >= 0 and _pelaje < colores_p.size():
+		tuyo = Color(colores_p[_pelaje])
+	for c in _caballos_fig:
+		if c["tipo"] == "pelaje" and c["i"] < colores_p.size():
+			c["poly"].color = Color(colores_p[c["i"]])
+		else:
+			c["poly"].color = tuyo
+
+
+func _poner_material(m, c1, c2, dibujo, cantidad):
+	m.set_shader_param("color_1", c1)
+	m.set_shader_param("color_2", c2)
+	m.set_shader_param("diseno", dibujo)
+	m.set_shader_param("cantidad", cantidad)
 
 
 func _marcar(b, marcado):
@@ -547,6 +897,22 @@ func _marcar(b, marcado):
 		_pintar_boton(b, color_dorado, color_fondo_panel, 6)
 	else:
 		_pintar_boton(b, color_fondo_panel, color_dorado, 6)
+
+
+# Boton con figura: escogido = borde dorado grueso y fondo dorado suave.
+func _marcar_icono(b, marcado):
+	var e = StyleBoxFlat.new()
+	if marcado:
+		e.bg_color = Color(color_dorado.r, color_dorado.g, color_dorado.b, 0.18)
+		e.border_color = color_dorado
+		e.set_border_width_all(3)
+	else:
+		e.bg_color = Color(0, 0, 0, 0)
+		e.border_color = Color(color_dorado.r, color_dorado.g, color_dorado.b, 0.45)
+		e.set_border_width_all(1)
+	e.set_corner_radius_all(6)
+	for estado in ["normal", "hover", "pressed", "disabled", "focus"]:
+		b.add_stylebox_override(estado, e)
 
 
 # ------------------------------------------------------------

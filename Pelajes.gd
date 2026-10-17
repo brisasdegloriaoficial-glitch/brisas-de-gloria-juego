@@ -36,6 +36,16 @@ export var maximo_claros := 4
 export var maximo_blancos := 1
 # Cuantos Cuarto de Milla salen con su alazan original (sin pintar) en cada carrera.
 export var cuartomilla_originales := 2
+# NUEVO - Brillo promedio de la textura de cada raza, ya calculado. Asi el
+# pelaje sale del mismo tono en la PC y en el telefono (en el telefono el
+# juego no puede leer la textura para calcularlo). Si cambias una textura,
+# pon aqui su numero nuevo; si una raza no esta en la lista, el juego lo calcula.
+export var medias_texturas := {
+	"res://Caballos/Texturas/Americano_color.jpg": 0.382,
+	"res://Caballos/Texturas/Arabe_color.jpg": 0.343,
+	"res://Caballos/Texturas/CuartoMilla_color.jpg": 0.081,
+	"res://Caballos/Texturas/Ingles_color.jpg": 0.032,
+}
 
 const NOMBRES = ["castaño", "zaino", "alazán", "alazán tostado", "negro", "tordo", "tordo oscuro", "blanco", "negro azabache", "castaño oscuro", "zaino colorado"]
 const COLORES = ["8a4b2a", "4a2a18", "b5652d", "7a3a1a", "2e2a26", "b4b4b4", "8a8a8a", "ffffff", "141414", "5c3320", "6b2f1c"]
@@ -282,6 +292,9 @@ func _material(textura, color):
 func _media_textura(t) -> float:
 	if t == null:
 		return 0.55
+	# NUEVO - Si la raza tiene su numero en Medias Texturas, se usa ese.
+	if medias_texturas.has(t.resource_path):
+		return float(medias_texturas[t.resource_path])
 	if _medias.has(t):
 		return _medias[t]
 	var m = _media(t, true)

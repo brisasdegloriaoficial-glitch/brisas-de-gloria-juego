@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/Naci_ParaCabalgar.ogg-95195e55e0d6bf3500152f0bd2bbc027.oggstr"
+
+[deps]
+
+source_file="res://Sonidos/Naci_ParaCabalgar.ogg"
+dest_files=[ "res://.import/Naci_ParaCabalgar.ogg-95195e55e0d6bf3500152f0bd2bbc027.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0
