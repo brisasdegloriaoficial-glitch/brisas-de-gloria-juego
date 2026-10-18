@@ -20,6 +20,9 @@ export var mostrar_siempre = false
 # la lista de distancias tiene la pantalla entera para ella sola.
 # Aparecen solos apenas arranca la carrera.
 export var ocultar_hasta_la_partida = true
+# En la pausa los mandos se esconden, para que no tapen la ruedita
+# de ajustes ni los botones REANUDAR y REINICIAR. Al reanudar vuelven.
+export var ocultar_en_pausa = true
 export var nombre_pantalla_inicio = "PantallaInicio"
 export var margen_borde = 16
 export var separacion = 10
@@ -57,6 +60,7 @@ export var color_contorno_etiqueta = Color(0, 0, 0, 0.85)
 
 
 var _botones = []
+var _acciones = []
 var _visibles = true
 
 
@@ -103,6 +107,8 @@ func _agregar_boton(direccion, etiqueta, tamano, centro, accion, lado = "derecha
 	_posicionar(boton, centro, tamano, lado)
 	boton.connect("button_down", self, "_on_boton_bajado", [accion])
 	boton.connect("button_up", self, "_on_boton_soltado", [accion])
+	if not accion in _acciones:
+		_acciones.append(accion)
 	if ocultar_hasta_la_partida:
 		boton.visible = false
 	_botones.append(boton)
@@ -159,27 +165,41 @@ func _puntos_triangulo(direccion, c):
 	return p
 
 
-# Camarita: cuerpo, visor arriba y lente oscura al centro.
+# Filmadora: cuerpo, lente al lado y dos rollos arriba.
+# Su tamano sale de Ancho Flecha y Alto Flecha (Inspector).
 func _dibujar_camara(boton, tamano):
 	var c = Vector2(tamano.x * 0.5, tamano.y * altura_flecha_en_boton)
-	var w = ancho_flecha * 1.2
-	var h = alto_flecha
-	var cuerpo = Polygon2D.new()
-	cuerpo.polygon = PoolVector2Array([
-		c + Vector2(-w * 0.5, -h * 0.5), c + Vector2(w * 0.5, -h * 0.5),
-		c + Vector2(w * 0.5, h * 0.5), c + Vector2(-w * 0.5, h * 0.5)])
-	cuerpo.color = color_flecha
-	boton.add_child(cuerpo)
-	var visor = Polygon2D.new()
-	visor.polygon = PoolVector2Array([
-		c + Vector2(-w * 0.3, -h * 0.5), c + Vector2(-w * 0.05, -h * 0.5),
-		c + Vector2(-w * 0.05, -h * 0.75), c + Vector2(-w * 0.3, -h * 0.75)])
-	visor.color = color_flecha
-	boton.add_child(visor)
-	var lente = Polygon2D.new()
-	lente.polygon = _puntos_circulo(c, h * 0.3)
-	lente.color = Color(0, 0, 0, 0.55)
-	boton.add_child(lente)
+	var w = ancho_flecha * 0.87       # ancho del cuerpo
+	var h = alto_flecha * 0.7         # alto del cuerpo
+	var t = ancho_flecha * 0.4        # largo del lente
+	var r = alto_flecha * 0.25        # radio de los rollos
+	var bx = c.x - t * 0.5            # corre el cuerpo para que todo quede centrado
+	var by = c.y + r * 0.5            # baja el cuerpo para dejarle sitio a los rollos
+	var cuerpo = PoolVector2Array([
+		Vector2(bx - w * 0.5, by - h * 0.5), Vector2(bx + w * 0.5, by - h * 0.5),
+		Vector2(bx + w * 0.5, by + h * 0.5), Vector2(bx - w * 0.5, by + h * 0.5)])
+	var lente = PoolVector2Array([
+		Vector2(bx + w * 0.5 - 1, by - h * 0.12), Vector2(bx + w * 0.5 + t, by - h * 0.5),
+		Vector2(bx + w * 0.5 + t, by + h * 0.5), Vector2(bx + w * 0.5 - 1, by + h * 0.12)])
+	var rollo_1 = Vector2(bx - w * 0.22, by - h * 0.5 - r + 1)
+	var rollo_2 = Vector2(bx + w * 0.26, by - h * 0.5 - r + 1)
+	var capas = []
+	if grosor_contorno_flecha > 0:
+		var g = grosor_contorno_flecha
+		capas.append([_expandir(cuerpo, Vector2(bx, by), g), color_contorno_flecha])
+		capas.append([_expandir(lente, Vector2(bx + w * 0.5 + t * 0.5, by), g), color_contorno_flecha])
+		capas.append([_puntos_circulo(rollo_1, r + g), color_contorno_flecha])
+		capas.append([_puntos_circulo(rollo_2, r + g), color_contorno_flecha])
+	capas.append([cuerpo, color_flecha])
+	capas.append([lente, color_flecha])
+	for rollo in [rollo_1, rollo_2]:
+		capas.append([_puntos_circulo(rollo, r), color_flecha])
+		capas.append([_puntos_circulo(rollo, r * 0.35), Color(0, 0, 0, 0.6)])
+	for capa in capas:
+		var pieza = Polygon2D.new()
+		pieza.polygon = capa[0]
+		pieza.color = capa[1]
+		boton.add_child(pieza)
 
 
 func _puntos_circulo(c, radio):
@@ -301,15 +321,20 @@ func _on_boton_soltado(accion):
 
 
 # ------------------------------------------------------------
-# Mostrar los mandos recien cuando arranca la carrera
+# Mostrar los mandos recien cuando arranca la carrera,
+# y esconderlos mientras el juego esta en pausa.
 # ------------------------------------------------------------
 # La pantalla de inicio se borra sola al apretar PARTIDA. Mientras
 # siga estando, los mandos quedan escondidos.
 func _process(_delta):
-	if not ocultar_hasta_la_partida or _botones.empty():
+	if _botones.empty():
 		return
 
-	var mostrar = _pantalla_de_inicio() == null
+	var mostrar = true
+	if ocultar_hasta_la_partida and _pantalla_de_inicio() != null:
+		mostrar = false
+	if ocultar_en_pausa and get_tree().paused:
+		mostrar = false
 	if mostrar == _visibles:
 		return
 
@@ -317,6 +342,10 @@ func _process(_delta):
 	for boton in _botones:
 		if is_instance_valid(boton):
 			boton.visible = mostrar
+	# Al esconderlos, se suelta cualquier boton que haya quedado apretado.
+	if not mostrar:
+		for accion in _acciones:
+			Input.action_release(accion)
 
 
 func _pantalla_de_inicio():

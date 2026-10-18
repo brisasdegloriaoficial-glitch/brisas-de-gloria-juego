@@ -31,10 +31,10 @@ tiempo_apoyo = 0.25
 bajar_cuerpo = 0.06
 
 [node name="BoneAttachment" parent="Caballo_Arabe_01/Armature/Skeleton" index="0"]
-transform = Transform( -0.0766966, -0.997054, 0.000226304, 0.99705, -0.0766968, -0.0029411, 0.0029498, 7.70134e-08, 0.999996, 0.0991127, 1.09601, 0.00302809 )
+transform = Transform( -0.0766966, -0.997054, 0.000226304, 0.99705, -0.0766968, -0.0029411, 0.0029498, 7.70134e-08, 0.999996, 0.0991127, 1.16987, 0.0030281 )
 
 [node name="tripo_86a61581_cf2c_408b_a89a_6ca6651d7480" parent="Caballo_Arabe_01/Armature/Skeleton/BoneAttachment" index="0"]
-transform = Transform( 0.0336517, 0.599335, -0.0654936, -0.799046, 0.0249103, -0.07972, -0.0198484, 0.0133101, 3.09828, -0.044946, 0.0113639, -0.00373048 )
+transform = Transform( 0.0336517, 0.599335, -0.0633809, -0.799046, 0.0249103, -0.0771484, -0.0198484, 0.0133101, 2.99834, -0.044946, 0.0113639, -0.00373048 )
 material_override = ExtResource( 11 )
 mesh = ExtResource( 12 )
 
@@ -67,6 +67,7 @@ modelo_estribo = ExtResource( 7 )
 planta_pie = Vector3( 0, 0, -0.01 )
 
 [node name="Riendas" type="Spatial" parent="Caballo_Arabe_01/Armature/Skeleton/BoneAttachment/Jinete_Sentado2"]
+visible = false
 script = ExtResource( 15 )
 ancho_rienda = 10.0
 grosor_rienda = 2.0
@@ -76,7 +77,7 @@ estado = "listas"
 [node name="Cincha_Arabe" parent="Caballo_Arabe_01/Armature/Skeleton/BoneAttachment" index="2" instance=ExtResource( 6 )]
 
 [node name="BoneAttachment_Cabeza" type="BoneAttachment" parent="Caballo_Arabe_01/Armature/Skeleton" index="2"]
-transform = Transform( -0.277643, -0.960679, 0.00307635, 0.960541, -0.277655, -0.0163465, 0.0165579, -0.00158346, 0.999861, -1.10935, 1.54957, 0.039969 )
+transform = Transform( -0.156206, -0.987724, 0.000844385, 0.987653, -0.156205, -0.0118438, 0.0118302, -0.00101606, 0.999929, -1.05514, 1.67953, 0.037691 )
 bone_name = "tripo__Head_5"
 
 [node name="Brida_Arabe" parent="Caballo_Arabe_01/Armature/Skeleton/BoneAttachment_Cabeza" instance=ExtResource( 9 )]
