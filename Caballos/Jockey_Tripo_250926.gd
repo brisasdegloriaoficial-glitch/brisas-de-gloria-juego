@@ -5,7 +5,8 @@ extends Spatial
 # Pone al jinete en postura de jockey, le da el movimiento de galope
 # y el latigazo con la mano derecha. Todo se ajusta en el Inspector.
 # Ángulos en grados.
-# VERSION 16-oct: castigo corrido en los ultimos metros (unos dan dos latigazos, otros castigan corrido)
+# VERSION 20-oct: en la 800 los rivales no echan latigo, solo arrean, y arrean mas
+# (antes) VERSION 16-oct: castigo corrido en los ultimos metros (unos dan dos latigazos, otros castigan corrido)
 # (antes) VERSION: castigo en los ultimos 400 m (oct 2026)
 #
 # SIMETRÍA: el esqueleto de Tripo trae giros escondidos distintos en cada
@@ -73,6 +74,12 @@ export var arreo_durante_carrera := true   # antes de los ultimos metros arrean 
 export var arreo_cada_segundos := 8.0      # cada cuanto arrea un rato (al azar)
 export var arreo_dura_segundos := 2.5      # cuanto dura cada rato (al azar)
 export var arreo_fuerza_carrera := 0.6     # 1 = arreo completo; en carrera algo menos que en el final
+# NUEVO 20-oct - LA 800: los rivales no echan latigo, solo arrean, y arrean mas.
+# Solo cambia la 800; las demas distancias siguen con las casillas de arriba.
+export var latigo_en_800 := false          # desmarcado = en la 800 los rivales no echan latigo
+export var arreo_cada_segundos_800 := 3.0  # en la 800 arrean mas seguido (en las demas: Arreo Cada Segundos)
+export var arreo_dura_segundos_800 := 3.0  # y cada rato de arreo dura mas
+export var arreo_fuerza_carrera_800 := 0.9 # y arrean mas fuerte (1 = arreo completo)
 export var desfasar_galope := true         # cada jinete se mueve a su ritmo (sin nado sincronizado)
 export var latigo_duracion_golpe := 0.45
 # Cada golpe: 1) sube el brazo adelante y arriba, 2) lo baja en diagonal
@@ -115,6 +122,7 @@ var _t_metros := 0.0
 var _ultimo_offset := 0.0
 var _en_movimiento := false
 var _termino := false
+var _es_800 := false   # NUEVO 20-oct - este rival corre la 800
 
 var _rest := []      # reposo de cada hueso
 var _padre := []     # padre de cada hueso
@@ -142,7 +150,9 @@ func _ready():
 		_factor_castigo = rand_range(1.0, max(castigo_menos_seguido, 1.0))
 		_metros_empieza = rand_range(min(castigo_empieza_minimo, metros_castigo), metros_castigo)
 		_castiga_corrido = randf() < probabilidad_castigo_corrido
-		_proximo_arreo = arreo_cada_segundos * rand_range(0.3, 1.5)
+		# NUEVO 20-oct - se revisa una sola vez, al largar (no carga la laptop).
+		_es_800 = ConfiguracionCarrera != null and ConfiguracionCarrera.modo_recta
+		_proximo_arreo = _arreo_cada() * rand_range(0.3, 1.5)
 	if desfasar_galope:
 		_t = randf() * 10.0
 	_esq = _buscar_esqueleto(self)
@@ -172,6 +182,11 @@ func _ready():
 	for lado in ["Left", "Right"]:
 		for p in _PIERNA + _BRAZO:
 			_h[lado + p] = _hueso(lado + p)
+
+
+# NUEVO 20-oct - cada cuanto arrea un rato: en la 800 usa su propia casilla.
+func _arreo_cada() -> float:
+	return arreo_cada_segundos_800 if _es_800 else arreo_cada_segundos
 
 
 func latigazo(golpes := 0):
@@ -242,7 +257,9 @@ func _process(delta):
 		_proximo_latigo = min(_proximo_latigo, rand_range(0.1, 0.4))
 	_estaba_corrido = corrido
 
-	if latigo_automatico and not _latigo_activo:
+	# NUEVO 20-oct - en la 800 los rivales no echan latigo (Latigo En 800 desmarcado).
+	var latigo_permitido := not (_es_800 and not latigo_en_800)
+	if latigo_automatico and latigo_permitido and not _latigo_activo:
 		var puede := not _termino
 		if castigar_solo_al_final:
 			puede = puede and en_final and _metros <= _metros_empieza
@@ -269,15 +286,15 @@ func _process(delta):
 		elif arreo_durante_carrera and _en_movimiento:
 			_t_arreo += delta
 			if _arreando_rato:
-				meta_arreo = arreo_fuerza_carrera
+				meta_arreo = arreo_fuerza_carrera_800 if _es_800 else arreo_fuerza_carrera
 				if _t_arreo >= _dura_arreo:
 					_arreando_rato = false
 					_t_arreo = 0.0
-					_proximo_arreo = arreo_cada_segundos * rand_range(0.5, 1.5)
+					_proximo_arreo = _arreo_cada() * rand_range(0.5, 1.5)
 			elif _t_arreo >= _proximo_arreo:
 				_arreando_rato = true
 				_t_arreo = 0.0
-				_dura_arreo = arreo_dura_segundos * rand_range(0.6, 1.4)
+				_dura_arreo = (arreo_dura_segundos_800 if _es_800 else arreo_dura_segundos) * rand_range(0.6, 1.4)
 	_arreo = move_toward(_arreo, meta_arreo, delta * arreo_suavidad)
 
 	var fase := sin(_t * trancos_por_segundo * TAU)

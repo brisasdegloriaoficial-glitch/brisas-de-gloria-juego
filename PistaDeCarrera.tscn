@@ -33359,7 +33359,12 @@ autoplay = "ArmatureAction_Armature"
 [node name="Jockey" type="Node" parent="TrackPath/Enrutador_Caballo1"]
 script = ExtResource( 8 )
 costo_latigo_ritmo = 4.0
+retroceso_maximo_freno = 20.0
 niveles_1_y_2_fuerza_800 = 1.0
+niveles_3_y_4_empuje_800 = 0.2
+niveles_5_y_6_empuje_800 = 0.2
+niveles_7_y_8_empuje_800 = 0.2
+niveles_9_y_10_empuje_800 = 0.2
 niveles_9_y_10_fuerza_800 = 1.15
 niveles_5_y_6_empuje_1100_arena = 1.05
 niveles_7_y_8_empuje_1100_arena = 1.5
@@ -33367,7 +33372,7 @@ niveles_9_y_10_empuje_1100_arena = 1.1
 niveles_1_y_2_fuerza_1200_grama = 1.01
 niveles_3_y_4_fuerza_1200_grama = 1.015
 niveles_5_y_6_fuerza_1200_grama = 1.025
-niveles_7_y_8_fuerza_1200_grama = 1025.0
+niveles_7_y_8_fuerza_1200_grama = 1.025
 niveles_9_y_10_fuerza_1200_grama = 1.05
 niveles_1_y_2_empuje_1600_grama = 1.2
 niveles_3_y_4_empuje_1600_grama = 1.3
@@ -33394,6 +33399,10 @@ niveles_3_y_4_empuje_1900_arena = 1.1
 niveles_5_y_6_empuje_1900_arena = 1.2
 niveles_7_y_8_empuje_1900_arena = 1.3
 niveles_9_y_10_empuje_1900_arena = 1.4
+largas_desde_metros = 8000.0
+rivales_largas_niveles_1_a_3 = 1.01
+rivales_largas_niveles_4_a_6 = 1.03
+rivales_largas_niveles_7_a_10 = 1.05
 
 [node name="SonidoCascos" type="AudioStreamPlayer" parent="TrackPath/Enrutador_Caballo1"]
 script = ExtResource( 44 )
