@@ -20,6 +20,7 @@ GestorNivel="*res://GestorNivel.gd"
 ConfiguracionCarrera="*res://ConfiguracionCarrera.gd"
 SonidoBotones="*res://SonidoBotones.gd"
 ControlVolumen="*res://ControlVolumen.gd"
+GestorRed1Vs1="*res://GestorRed_1Vs1.tscn"
 
 [display]
 

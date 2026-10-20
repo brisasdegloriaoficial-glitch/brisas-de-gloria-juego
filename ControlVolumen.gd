@@ -1,6 +1,7 @@
 extends CanvasLayer
 # ControlVolumen (AutoLoad). En la portada y en la pausa aparece un ENGRANAJE
-# abajo a la izquierda. Al tocarlo se abre la ventana emergente de
+# arriba a la derecha, al lado de PAUSAR y REINICIAR (antes iba abajo a la
+# izquierda; ese lugar ahora es del boton 1 VS 1). Al tocarlo se abre la ventana emergente de
 # CONFIGURACION (volumen y calidad), con el fondo oscurecido detras.
 # Guarda lo elegido. Los AutoLoad no salen en el Inspector: todos los
 # valores para ajustar estan aqui arriba, con su codigo hex.
@@ -28,8 +29,8 @@ const REDONDEO_PANEL = 10
 const REDONDEO_BOTONES = 6
 const ALTO_BOTONES = 34
 const TAMANO_ENGRANAJE = 44          # ancho y alto del boton redondo
-const ENGRANAJE_IZQUIERDA = 14       # separacion al borde izquierdo
-const ENGRANAJE_ABAJO = 14           # separacion al borde de abajo
+const ENGRANAJE_DERECHA = 392        # separacion al borde derecho (UNIFORME llega hasta 380)
+const ENGRANAJE_ARRIBA = 1           # separacion al borde de arriba
 const DIENTES_ENGRANAJE = 8
 
 # ---- Otros ----
@@ -137,14 +138,15 @@ func _construir():
 	var redondo = _estilo(COLOR_VINO, COLOR_DORADO, GROSOR_BORDE, TAMANO_ENGRANAJE / 2, 0, 0)
 	for estado in ["normal", "hover", "pressed"]:
 		_engranaje.add_stylebox_override(estado, redondo)
-	_engranaje.anchor_left = 0
-	_engranaje.anchor_right = 0
-	_engranaje.anchor_top = 1
-	_engranaje.anchor_bottom = 1
-	_engranaje.margin_left = ENGRANAJE_IZQUIERDA
-	_engranaje.margin_right = ENGRANAJE_IZQUIERDA + TAMANO_ENGRANAJE
-	_engranaje.margin_top = -ENGRANAJE_ABAJO - TAMANO_ENGRANAJE
-	_engranaje.margin_bottom = -ENGRANAJE_ABAJO
+	# Arriba a la derecha, al lado de PAUSAR y REINICIAR.
+	_engranaje.anchor_left = 1
+	_engranaje.anchor_right = 1
+	_engranaje.anchor_top = 0
+	_engranaje.anchor_bottom = 0
+	_engranaje.margin_left = -ENGRANAJE_DERECHA - TAMANO_ENGRANAJE
+	_engranaje.margin_right = -ENGRANAJE_DERECHA
+	_engranaje.margin_top = ENGRANAJE_ARRIBA
+	_engranaje.margin_bottom = ENGRANAJE_ARRIBA + TAMANO_ENGRANAJE
 	_engranaje.connect("pressed", self, "_alternar_ventana")
 	_engranaje.connect("draw", self, "_dibujar_engranaje")
 	add_child(_engranaje)
