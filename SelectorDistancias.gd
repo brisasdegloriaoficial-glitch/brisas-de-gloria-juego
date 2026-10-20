@@ -64,9 +64,9 @@ var _confirmando_borrar = 0.0
 var _espera_nivel = -1.0
 
 var distancias = [
-	{"etiqueta": "800m", "valor": 800.0, "arreo": 60, "estamina": 100},
-	{"etiqueta": "1200m", "valor": 1600.0, "arreo": 40, "estamina": 120},
-	{"etiqueta": "1600m", "valor": 2000.0, "arreo": 50, "estamina": 160},
+	{"etiqueta": "800m", "valor": 800.0, "arreo": 60, "estamina": 80},
+	{"etiqueta": "1200m", "valor": 1600.0, "arreo": 40, "estamina": 100},
+	{"etiqueta": "1600m", "valor": 2000.0, "arreo": 50, "estamina": 120},
 	# Las tres siguientes NO usan formula de "vueltas" a ciegas: cada
 	# valor es el punto de arranque de otra distancia YA VERIFICADO en
 	# recta, mas una o mas vueltas completas (3334.799316 cada una).
@@ -77,14 +77,14 @@ var distancias = [
 	#
 	# 2000m: arranca en el mismo punto que 1200m (offset ~400.5),
 	# 2 vueltas desde ahi. 1600.0 + 3334.799316 = 4934.799316
-	{"etiqueta": "2000m", "valor": 4934.799316, "arreo": 60, "estamina": 200},
+	{"etiqueta": "2000m", "valor": 4934.799316, "arreo": 60, "estamina": 140},
 	# 2400m: arranca en el mismo punto que 800m (offset ~56.0), que
 	# tiene mas recta libre antes de la curva que el punto de 1200m.
 	# 2 vueltas desde ahi. 1944.5 + 3334.799316 = 5279.299316
-	{"etiqueta": "2400m", "valor": 5279.299316, "arreo": 70, "estamina": 150},
+	{"etiqueta": "2400m", "valor": 5279.299316, "arreo": 70, "estamina": 160},
 	# 3000m: arranca en el mismo punto que 1200m (offset ~400.5),
 	# 3 vueltas desde ahi. 1600.0 + 2*3334.799316 = 8269.598632
-	{"etiqueta": "3000m", "valor": 8269.598632, "arreo": 80, "estamina": 300},
+	{"etiqueta": "3000m", "valor": 8269.598632, "arreo": 80, "estamina": 200},
 ]
 
 # NUEVO - carreras de la pista de arena. El nombre es lo que ve el
@@ -95,7 +95,7 @@ var distancias = [
 #   1900m -> vuelta y media      (764.5 + 1529 = 2293.5)
 var distancias_arena = [
 	{"etiqueta": "1100m", "valor": 764.5, "arreo": 60, "estamina": 100},
-	{"etiqueta": "1900m", "valor": 2293.5, "arreo": 50, "estamina": 200},
+	{"etiqueta": "1900m", "valor": 2293.5, "arreo": 50, "estamina": 150},
 ]
 var botones = []
 

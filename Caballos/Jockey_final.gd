@@ -1,4 +1,5 @@
 extends Node
+# VERSION 18-oct: dificultad por niveles (de 2 en 2) en todas las distancias. Los rivales no se tocan.
 # VERSION 16-oct: freno con su propio ancho, mas pegado a la baranda y tropezon.
 # (antes) VERSION: el nivel solo cambia los ultimos 400 m de los rivales (tu caballo siempre al 100%) + ayuda tras 3 derrotas + JUGAR OTRA VEZ + NIVEL + META SUPERADA (9-oct-2026)
 
@@ -40,6 +41,35 @@ export var latigazo_costo_estamina = 4.0
 export var limites_desde_nivel = 11
 
 export var frenado_reduccion = 0.10
+
+# --- RITMO (como en Gallop Racer) --------------------------------
+# Cada arreo SUBE el ritmo un escalon y cada freno lo BAJA uno, y el
+# ritmo SE QUEDA hasta que el jinete lo cambie. El ritmo 0 es ir al
+# paso del grupo. Ya no hay piloto automatico: sin arrear, tu caballo
+# va un poco mas lento que el grupo y se va quedando.
+# El latigo sigue siendo un empujon corto encima del ritmo.
+# (La carrera de 800 m sigue con su modo propio.)
+export var usar_ritmo = true
+export var ritmo_inicial = -2              # al salir, sin arrear: 2 escalones mas lento que el grupo
+export var ritmo_minimo = -5
+export var ritmo_maximo = 3                # tope: no se desboca
+export var porcentaje_por_escalon = 2.5    # cada escalon hacia arriba = 2.5% mas rapido que el grupo
+export var porcentaje_por_escalon_abajo = 4.0   # cada escalon hacia abajo = 4% mas lento (sin arreo o frenando se queda rapido)
+export var gasto_estamina_por_escalon = 2.0   # por segundo, por cada escalon por encima del grupo
+export var recuperacion_frenando = 2.0     # por debajo del paso del grupo recupera estamina al doble
+export var segundos_cansancio = 1.5        # sin estamina, baja un escalon cada tantos segundos
+# Parte de la carrera (0 a 1) desde la que el paso del grupo deja de
+# seguir a los rivales: en el remate, los rivales aceleran segun el
+# nivel y tu caballo NO los sigue solo; ahi mandan tu ritmo y el latigo.
+export var congelar_paso_desde = 0.65
+# Salida: en estos primeros metros todo funciona COMO ANTES (sin ritmo y
+# con el piloto automatico de Enrutador_Caballo1). Despues manda el ritmo.
+export var metros_de_salida = 150.0
+export var recuperacion_estamina_ritmo = 0.5   # por segundo, yendo al paso del grupo (por debajo, x Recuperacion Frenando)
+export var costo_latigo_ritmo = 10.0           # estamina que gasta cada latigazo
+export var empuje_latigo_ritmo = 0.15          # cada latigazo: 15% mas rapido por un momento
+export var tope_latigo_ritmo = 1.25            # aunque eches muchos seguidos, no pasa de 25% mas rapido
+export var mostrar_ritmo = true
 
 export var giro_velocidad = 40.0
 # Suavidad del cambio de carril: mas bajo = arranca y frena de lado mas
@@ -350,6 +380,160 @@ export var ritmo_intervalo_ideal_max = 0.55
 export var ritmo_boost = 0.16
 export var ritmo_boost_fuera_de_ritmo = 0.05
 export var ritmo_penalizacion = 0.05
+
+# --- DIFICULTAD DE LA 800, DE 2 EN 2 NIVELES (NUEVO 18-oct) ---
+# Solo tu caballo. Los rivales no se tocan aqui.
+# Empuje: cuanto adelanta cada arreo bien dado (0.16 = 16% mas rapido
+# por un momento). Mas alto = adelanta mas.
+# Gasto: estamina que cuesta cada arreo. Mas alto = se cansa antes.
+# Fuerza: velocidad de tu caballo en toda la carrera (1.0 = normal,
+# 1.25 = 25% mas rapido). Es la que de verdad lo hace facil o dificil.
+# En la 800 estas casillas mandan sobre Ritmo Boost y Arreo Costo Estamina.
+export var niveles_1_y_2_empuje_800 = 0.16
+export var niveles_1_y_2_gasto_800 = 2.0
+export var niveles_1_y_2_fuerza_800 = 1.25
+export var niveles_3_y_4_empuje_800 = 0.16
+export var niveles_3_y_4_gasto_800 = 2.0
+export var niveles_3_y_4_fuerza_800 = 1.0
+export var niveles_5_y_6_empuje_800 = 0.16
+export var niveles_5_y_6_gasto_800 = 2.0
+export var niveles_5_y_6_fuerza_800 = 1.0
+export var niveles_7_y_8_empuje_800 = 0.16
+export var niveles_7_y_8_gasto_800 = 2.0
+export var niveles_7_y_8_fuerza_800 = 1.0
+export var niveles_9_y_10_empuje_800 = 0.16
+export var niveles_9_y_10_gasto_800 = 2.0
+export var niveles_9_y_10_fuerza_800 = 1.0
+
+# --- DIFICULTAD DE LA 1100 DE ARENA, DE 2 EN 2 NIVELES (NUEVO 18-oct) ---
+# Solo tu caballo. Aqui todas arrancan en 1 = como esta ahora.
+# 1.1 = 10% mas; 0.9 = 10% menos.
+# Fuerza: velocidad de tu caballo en toda la carrera. Mas alto = mas rapido.
+# Empuje: fuerza de cada latigazo. Mas alto = empuja mas.
+# Gasto: estamina que gasta el ritmo al ir adelante. Mas alto = se cansa antes.
+export var niveles_1_y_2_fuerza_1100_arena = 1.0
+export var niveles_1_y_2_empuje_1100_arena = 1.0
+export var niveles_1_y_2_gasto_1100_arena = 1.0
+export var niveles_3_y_4_fuerza_1100_arena = 1.0
+export var niveles_3_y_4_empuje_1100_arena = 1.0
+export var niveles_3_y_4_gasto_1100_arena = 1.0
+export var niveles_5_y_6_fuerza_1100_arena = 1.0
+export var niveles_5_y_6_empuje_1100_arena = 1.0
+export var niveles_5_y_6_gasto_1100_arena = 1.0
+export var niveles_7_y_8_fuerza_1100_arena = 1.0
+export var niveles_7_y_8_empuje_1100_arena = 1.0
+export var niveles_7_y_8_gasto_1100_arena = 1.0
+export var niveles_9_y_10_fuerza_1100_arena = 1.0
+export var niveles_9_y_10_empuje_1100_arena = 1.0
+export var niveles_9_y_10_gasto_1100_arena = 1.0
+
+# --- DIFICULTAD DE LA 1200 DE GRAMA, DE 2 EN 2 NIVELES (NUEVO 18-oct) ---
+# Igual que la 1100 de arena: todas arrancan en 1 = como esta ahora.
+export var niveles_1_y_2_fuerza_1200_grama = 1.0
+export var niveles_1_y_2_empuje_1200_grama = 1.0
+export var niveles_1_y_2_gasto_1200_grama = 1.0
+export var niveles_3_y_4_fuerza_1200_grama = 1.0
+export var niveles_3_y_4_empuje_1200_grama = 1.0
+export var niveles_3_y_4_gasto_1200_grama = 1.0
+export var niveles_5_y_6_fuerza_1200_grama = 1.0
+export var niveles_5_y_6_empuje_1200_grama = 1.0
+export var niveles_5_y_6_gasto_1200_grama = 1.0
+export var niveles_7_y_8_fuerza_1200_grama = 1.0
+export var niveles_7_y_8_empuje_1200_grama = 1.0
+export var niveles_7_y_8_gasto_1200_grama = 1.0
+export var niveles_9_y_10_fuerza_1200_grama = 1.0
+export var niveles_9_y_10_empuje_1200_grama = 1.0
+export var niveles_9_y_10_gasto_1200_grama = 1.0
+
+# --- DIFICULTAD DE LA 1600 DE GRAMA, DE 2 EN 2 NIVELES (NUEVO 18-oct) ---
+# Todas arrancan en 1 = como esta ahora.
+export var niveles_1_y_2_fuerza_1600_grama = 1.0
+export var niveles_1_y_2_empuje_1600_grama = 1.0
+export var niveles_1_y_2_gasto_1600_grama = 1.0
+export var niveles_3_y_4_fuerza_1600_grama = 1.0
+export var niveles_3_y_4_empuje_1600_grama = 1.0
+export var niveles_3_y_4_gasto_1600_grama = 1.0
+export var niveles_5_y_6_fuerza_1600_grama = 1.0
+export var niveles_5_y_6_empuje_1600_grama = 1.0
+export var niveles_5_y_6_gasto_1600_grama = 1.0
+export var niveles_7_y_8_fuerza_1600_grama = 1.0
+export var niveles_7_y_8_empuje_1600_grama = 1.0
+export var niveles_7_y_8_gasto_1600_grama = 1.0
+export var niveles_9_y_10_fuerza_1600_grama = 1.0
+export var niveles_9_y_10_empuje_1600_grama = 1.0
+export var niveles_9_y_10_gasto_1600_grama = 1.0
+
+# --- DIFICULTAD DE LA 2000 DE GRAMA, DE 2 EN 2 NIVELES (NUEVO 18-oct) ---
+# Todas arrancan en 1 = como esta ahora.
+export var niveles_1_y_2_fuerza_2000_grama = 1.0
+export var niveles_1_y_2_empuje_2000_grama = 1.0
+export var niveles_1_y_2_gasto_2000_grama = 1.0
+export var niveles_3_y_4_fuerza_2000_grama = 1.0
+export var niveles_3_y_4_empuje_2000_grama = 1.0
+export var niveles_3_y_4_gasto_2000_grama = 1.0
+export var niveles_5_y_6_fuerza_2000_grama = 1.0
+export var niveles_5_y_6_empuje_2000_grama = 1.0
+export var niveles_5_y_6_gasto_2000_grama = 1.0
+export var niveles_7_y_8_fuerza_2000_grama = 1.0
+export var niveles_7_y_8_empuje_2000_grama = 1.0
+export var niveles_7_y_8_gasto_2000_grama = 1.0
+export var niveles_9_y_10_fuerza_2000_grama = 1.0
+export var niveles_9_y_10_empuje_2000_grama = 1.0
+export var niveles_9_y_10_gasto_2000_grama = 1.0
+
+# --- DIFICULTAD DE LA 2400 DE GRAMA, DE 2 EN 2 NIVELES (NUEVO 18-oct) ---
+# Todas arrancan en 1 = como esta ahora.
+export var niveles_1_y_2_fuerza_2400_grama = 1.0
+export var niveles_1_y_2_empuje_2400_grama = 1.0
+export var niveles_1_y_2_gasto_2400_grama = 1.0
+export var niveles_3_y_4_fuerza_2400_grama = 1.0
+export var niveles_3_y_4_empuje_2400_grama = 1.0
+export var niveles_3_y_4_gasto_2400_grama = 1.0
+export var niveles_5_y_6_fuerza_2400_grama = 1.0
+export var niveles_5_y_6_empuje_2400_grama = 1.0
+export var niveles_5_y_6_gasto_2400_grama = 1.0
+export var niveles_7_y_8_fuerza_2400_grama = 1.0
+export var niveles_7_y_8_empuje_2400_grama = 1.0
+export var niveles_7_y_8_gasto_2400_grama = 1.0
+export var niveles_9_y_10_fuerza_2400_grama = 1.0
+export var niveles_9_y_10_empuje_2400_grama = 1.0
+export var niveles_9_y_10_gasto_2400_grama = 1.0
+
+# --- DIFICULTAD DE LA 3000 DE GRAMA, DE 2 EN 2 NIVELES (NUEVO 18-oct) ---
+# Todas arrancan en 1 = como esta ahora.
+export var niveles_1_y_2_fuerza_3000_grama = 1.0
+export var niveles_1_y_2_empuje_3000_grama = 1.0
+export var niveles_1_y_2_gasto_3000_grama = 1.0
+export var niveles_3_y_4_fuerza_3000_grama = 1.0
+export var niveles_3_y_4_empuje_3000_grama = 1.0
+export var niveles_3_y_4_gasto_3000_grama = 1.0
+export var niveles_5_y_6_fuerza_3000_grama = 1.0
+export var niveles_5_y_6_empuje_3000_grama = 1.0
+export var niveles_5_y_6_gasto_3000_grama = 1.0
+export var niveles_7_y_8_fuerza_3000_grama = 1.0
+export var niveles_7_y_8_empuje_3000_grama = 1.0
+export var niveles_7_y_8_gasto_3000_grama = 1.0
+export var niveles_9_y_10_fuerza_3000_grama = 1.0
+export var niveles_9_y_10_empuje_3000_grama = 1.0
+export var niveles_9_y_10_gasto_3000_grama = 1.0
+
+# --- DIFICULTAD DE LA 1900 DE ARENA, DE 2 EN 2 NIVELES (NUEVO 18-oct) ---
+# Todas arrancan en 1 = como esta ahora.
+export var niveles_1_y_2_fuerza_1900_arena = 1.0
+export var niveles_1_y_2_empuje_1900_arena = 1.0
+export var niveles_1_y_2_gasto_1900_arena = 1.0
+export var niveles_3_y_4_fuerza_1900_arena = 1.0
+export var niveles_3_y_4_empuje_1900_arena = 1.0
+export var niveles_3_y_4_gasto_1900_arena = 1.0
+export var niveles_5_y_6_fuerza_1900_arena = 1.0
+export var niveles_5_y_6_empuje_1900_arena = 1.0
+export var niveles_5_y_6_gasto_1900_arena = 1.0
+export var niveles_7_y_8_fuerza_1900_arena = 1.0
+export var niveles_7_y_8_empuje_1900_arena = 1.0
+export var niveles_7_y_8_gasto_1900_arena = 1.0
+export var niveles_9_y_10_fuerza_1900_arena = 1.0
+export var niveles_9_y_10_empuje_1900_arena = 1.0
+export var niveles_9_y_10_gasto_1900_arena = 1.0
 var _tiempo_ultimo_arreo = -1.0
 
 export(NodePath) var animador_path = NodePath("../Caballo/AnimationPlayer")
@@ -370,6 +554,11 @@ var estamina_actual = 100.0
 var tiempo_aviso_combo = 0.0
 var _efectos_temporales = []
 var _velocidad_base = 0.0
+var ritmo_actual = 0
+var _paso_grupo = 0.0
+var _centro_grupo_previo = -1.0
+var _centro_grupo = 0.0
+var _tiempo_cansado = 0.0
 var carrera_terminada = false
 
 var ultima_accion_nombre = "-"
@@ -416,7 +605,8 @@ func _ready():
 
 	# Velocidad de crucero del caballo, sin ningun empujon encima.
 	# Es la base sobre la que se calculan arreo, latigo y frenado.
-	_velocidad_base = enrutador.velocidad_avance * _fuerza_del_jugador()
+	_fuerza_ritmo = _fuerza_del_jugador()
+	_velocidad_base = enrutador.velocidad_avance * _fuerza_ritmo
 	_factor_rivales = _factor_rivales_por_nivel()
 
 	if not label_velocidad:
@@ -441,8 +631,16 @@ func _ready():
 
 	if GestorNivel:
 		estamina_maxima = GestorNivel.obtener_estamina_maxima()
+		# NUEVO 18-oct - empuje del latigo y gasto segun la distancia y el nivel
+		var cod_distancia = _codigo_distancia()
+		if cod_distancia != "":
+			empuje_latigo_ritmo *= _valor_nivel("empuje", cod_distancia)
+			gasto_estamina_por_escalon *= _valor_nivel("gasto", cod_distancia)
 		if GestorNivel.modo_recta:
 			modo_arreo_ritmo = true
+			# NUEVO 18-oct - empuje y gasto de la 800 segun el nivel
+			ritmo_boost = _valor_800("empuje")
+			arreo_costo_estamina = _valor_800("gasto")
 			_modo_recta_propio = true
 			_offset_inicial_propio = enrutador.offset
 			var pista = enrutador.get_parent()
@@ -455,6 +653,11 @@ func _ready():
 
 	limite_racha_actual = latigazo_limite_inicial
 	estamina_actual = estamina_maxima
+
+	ritmo_actual = ritmo_inicial
+	_paso_grupo = enrutador.velocidad_avance
+	if "factor_agrupacion" in enrutador:
+		_factor_agrupacion_original = enrutador.factor_agrupacion
 
 	_crear_aviso_final()
 	_aplicar_margen_photo_finish()
@@ -852,7 +1055,10 @@ func _process(delta):
 		return
 	_actualizar_efectos_temporales(delta)
 	_leer_controles(delta)
-	estamina_actual = min(estamina_maxima, estamina_actual + estamina_regen_por_segundo * delta)
+	if _ritmo_activo():
+		_actualizar_estamina_ritmo(delta)
+	else:
+		estamina_actual = min(estamina_maxima, estamina_actual + estamina_regen_por_segundo * delta)
 	if tiempo_aviso_combo > 0:
 		tiempo_aviso_combo -= delta
 	_revisar_linea_de_meta()
@@ -910,6 +1116,8 @@ func _actualizar_pantalla():
 
 	texto += "Velocidad: %.1f\n" % enrutador.velocidad_avance
 	texto += "Stamina: %d / %d\n" % [int(estamina_actual), int(estamina_maxima)]
+	if mostrar_ritmo and _ritmo_activo():
+		texto += "Ritmo: %+d\n" % ritmo_actual
 
 	# NUEVO - contador de distancia recorrida y tiempo, para poder
 	# leer en vivo (sin depender de la consola ni de donde quedo la
@@ -976,8 +1184,18 @@ func _actualizar_efectos_temporales(delta):
 
 		total *= 1.0 + (efecto["factor"] - 1.0) * peso
 
-	total = clamp(total, piso_empujon, tope_empujon)
-	enrutador.velocidad_avance = lerp(enrutador.velocidad_avance, _velocidad_base * total, clamp(suavidad_aceleracion * delta, 0.0, 1.0))
+	total = clamp(total, piso_empujon, tope_latigo_ritmo if _ritmo_activo() else tope_empujon)
+	var base = _velocidad_base
+	if _ritmo_activo():
+		_medir_paso_grupo(delta)
+		var en_salida = GestorNivel != null and GestorNivel.obtener_recorrido(enrutador) < metros_de_salida
+		# En la salida, piloto automatico como antes; despues, apagado.
+		if "factor_agrupacion" in enrutador:
+			enrutador.factor_agrupacion = _factor_agrupacion_original if en_salida else 0.0
+		if not en_salida:
+			var porcentaje = porcentaje_por_escalon if ritmo_actual >= 0 else porcentaje_por_escalon_abajo
+			base = _paso_grupo * _fuerza_ritmo * (1.0 + ritmo_actual * porcentaje / 100.0)
+	enrutador.velocidad_avance = lerp(enrutador.velocidad_avance, base * total, clamp(suavidad_aceleracion * delta, 0.0, 1.0))
 
 
 func _aplicar_efecto_temporal(factor, duracion):
@@ -1036,6 +1254,14 @@ func _ejecutar_arreo():
 	conteo_arreos += 1
 	ultima_accion_nombre = "Arreo"
 	conteo_acciones_total += 1
+	if _ritmo_activo():
+		# Sube un escalon (si queda estamina y no esta en el tope).
+		if ritmo_actual < ritmo_maximo and estamina_actual >= arreo_costo_estamina:
+			estamina_actual -= arreo_costo_estamina
+			ritmo_actual += 1
+			_tiempo_cansado = 0.0
+		_reproducir_si_existe(animacion_arreo)
+		return
 	if _sin_limites():
 		# Sin limite ni castigo: si queda estamina empuja, si no, nada.
 		if estamina_actual >= arreo_costo_estamina:
@@ -1078,6 +1304,12 @@ func _ejecutar_latigazo():
 	conteo_racha_actual += 1
 	ultima_accion_nombre = "Látigo"
 	conteo_acciones_total += 1
+	if _ritmo_activo():
+		if estamina_actual >= costo_latigo_ritmo:
+			estamina_actual -= costo_latigo_ritmo
+			_aplicar_efecto_temporal(1.0 + empuje_latigo_ritmo, duracion_efecto)
+			_reproducir_si_existe(animacion_latigazo_derecha)
+		return
 	if _sin_limites():
 		# Sin limite ni castigo: si queda estamina empuja, si no, nada.
 		if estamina_actual >= latigazo_costo_estamina:
@@ -1107,8 +1339,86 @@ func _cambiar_mano():
 
 
 func _ejecutar_frenado():
+	if _ritmo_activo():
+		# Baja un escalon: con 1 o 2 se estabiliza al paso del grupo.
+		ritmo_actual = max(ritmo_minimo, ritmo_actual - 1)
+		_aplicar_efecto_temporal(1.0 - frenado_reduccion, duracion_efecto)
+		_reproducir_si_existe(animacion_frenado)
+		return
 	_aplicar_efecto_temporal(1.0 - frenado_reduccion, duracion_efecto)
 	_reproducir_si_existe(animacion_frenado)
+
+
+# ------------------------------------------------------------
+# RITMO (como en Gallop Racer)
+# ------------------------------------------------------------
+func _ritmo_activo():
+	return usar_ritmo and not modo_arreo_ritmo
+
+
+var _fuerza_ritmo = 1.0
+var _factor_agrupacion_original = 0.0
+
+
+# Paso del grupo: la velocidad tipica de los rivales (la del medio),
+# medida con lo que avanza cada uno en la pista. No usa el "recorrido"
+# (que en las carreras de varias vueltas se descuadra). Desde
+# congelar_paso_desde ya no se actualiza.
+var _offset_previo = {}
+
+
+func _medir_paso_grupo(delta):
+	if GestorNivel == null or enrutador == null or delta <= 0.0:
+		return
+	var camino = enrutador.get_parent()
+	if camino == null:
+		return
+	var largo = 0.0
+	if "curve" in camino and camino.curve:
+		largo = camino.curve.get_baked_length()
+	var velocidades = []
+	var recorridos = []
+	for hijo in camino.get_children():
+		if hijo == enrutador or not (hijo is PathFollow) or not hijo.name.begins_with("Enrutador_Caballo"):
+			continue
+		recorridos.append(GestorNivel.obtener_recorrido(hijo))
+		var o = hijo.offset
+		if _offset_previo.has(hijo):
+			var d = o - _offset_previo[hijo]
+			if largo > 0.0:
+				d = fposmod(d + largo * 0.5, largo) - largo * 0.5
+			var v = d / delta
+			if v >= 0.0 and v < 80.0:
+				velocidades.append(v)
+		_offset_previo[hijo] = o
+	if not recorridos.empty():
+		recorridos.sort()
+		_centro_grupo = recorridos[recorridos.size() / 2]
+	if velocidades.empty() or _progreso_carrera() >= congelar_paso_desde:
+		return
+	velocidades.sort()
+	var v_medio = velocidades[velocidades.size() / 2]
+	_paso_grupo = lerp(_paso_grupo, v_medio, clamp(3.0 * delta, 0.0, 1.0))
+
+
+# Por encima del paso del grupo la estamina se gasta sola; al paso del
+# grupo se recupera como siempre; por debajo, al doble. Sin estamina,
+# el caballo se cansa y baja de ritmo solo, hasta el ritmo de salida.
+func _actualizar_estamina_ritmo(delta):
+	if ritmo_actual > 0:
+		estamina_actual -= gasto_estamina_por_escalon * ritmo_actual * delta
+	elif ritmo_actual == 0:
+		estamina_actual += recuperacion_estamina_ritmo * delta
+	else:
+		estamina_actual += recuperacion_estamina_ritmo * recuperacion_frenando * delta
+	estamina_actual = clamp(estamina_actual, 0.0, estamina_maxima)
+	if estamina_actual <= 0.0 and ritmo_actual > ritmo_inicial:
+		_tiempo_cansado += delta
+		if _tiempo_cansado >= segundos_cansancio:
+			_tiempo_cansado = 0.0
+			ritmo_actual -= 1
+	else:
+		_tiempo_cansado = 0.0
 
 
 func _reproducir_si_existe(nombre_animacion):
@@ -2503,6 +2813,12 @@ func _fuerza_del_jugador() -> float:
 			fuerza = ayuda_tras_derrotas
 	if diagnostico_llegada:
 		print("[BDG-Jockey] Fuerza de tu caballo: ", fuerza)
+	# NUEVO 18-oct - en la 800, la fuerza de tu caballo segun el nivel
+	if ConfiguracionCarrera and ConfiguracionCarrera.modo_recta:
+		fuerza *= _valor_800("fuerza")
+	elif _codigo_distancia() != "":
+		# NUEVO 18-oct - las demas distancias: la fuerza de tu caballo segun el nivel
+		fuerza *= _valor_nivel("fuerza", _codigo_distancia())
 	return fuerza
 
 # ------------------------------------------------------------
@@ -2518,3 +2834,42 @@ var _en_largas = false
 
 func _es_bloque_largas() -> bool:
 	return ConfiguracionCarrera != null and not ConfiguracionCarrera.modo_recta and ConfiguracionCarrera.distancia_metros >= largas_desde_metros
+
+
+# NUEVO 18-oct - valor de la 800 segun el nivel, de 2 en 2
+# (niveles 1 y 2, 3 y 4, 5 y 6, 7 y 8, 9 y 10).
+func _valor_800(que) -> float:
+	var nivel = 1
+	if GestorNivel:
+		nivel = int(clamp(GestorNivel.nivel_actual, 1, 10))
+	var primero = ((nivel - 1) / 2) * 2 + 1
+	return float(get("niveles_%d_y_%d_%s_800" % [primero, primero + 1, que]))
+
+
+# NUEVO 18-oct - valor de cualquier distancia segun el nivel, de 2 en 2.
+# El nombre de la casilla es niveles_X_y_Y_<que>_<distancia>.
+func _valor_nivel(que, distancia) -> float:
+	var nivel = 1
+	if GestorNivel:
+		nivel = int(clamp(GestorNivel.nivel_actual, 1, 10))
+	var primero = ((nivel - 1) / 2) * 2 + 1
+	return float(get("niveles_%d_y_%d_%s_%s" % [primero, primero + 1, que, distancia]))
+
+
+# NUEVO 18-oct - nombre de la distancia elegida, para buscar sus casillas.
+# Ojo: SelectorDistancias guarda el PUNTO DE ARRANQUE de cada boton, no los
+# metros (el boton "1200m" guarda 1600, el "1600m" guarda 2000, etc.).
+# La 800 va aparte (modo recta). Si la distancia no esta aqui, devuelve "".
+func _codigo_distancia() -> String:
+	if ConfiguracionCarrera == null or ConfiguracionCarrera.modo_recta:
+		return ""
+	var v = float(ConfiguracionCarrera.distancia_metros)
+	if ConfiguracionCarrera.pista_arena:
+		if v < 1500.0:
+			return "1100_arena"
+		return "1900_arena"
+	var tabla = [[1600.0, "1200_grama"], [2000.0, "1600_grama"], [4934.8, "2000_grama"], [5279.3, "2400_grama"], [8269.6, "3000_grama"]]
+	for fila in tabla:
+		if abs(v - fila[0]) < 1.0:
+			return fila[1]
+	return ""

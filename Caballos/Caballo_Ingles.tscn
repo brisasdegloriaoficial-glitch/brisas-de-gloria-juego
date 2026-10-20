@@ -38,12 +38,8 @@ mecer_cola = 6.0
 trancos_crucero = 1.7
 trancos_tope = 2.2
 
-[node name="Skeleton" parent="Caballo_Ingles_01/RootNode/Armature" index="0"]
-bones/3/bound_children = [ NodePath("BoneAttachment") ]
-bones/9/bound_children = [ NodePath("BoneAttachment_Cabeza") ]
-
 [node name="BoneAttachment" type="BoneAttachment" parent="Caballo_Ingles_01/RootNode/Armature/Skeleton" index="1"]
-transform = Transform( -0.480541, -0.730246, 0.485614, 0.824472, -0.564902, -0.0336167, 0.298873, 0.384221, 0.873527, -0.0297827, 0.73038, -0.0956861 )
+transform = Transform( -0.480541, -0.730246, 0.485614, 0.824472, -0.564902, -0.0336167, 0.298873, 0.384221, 0.873527, -0.0297827, 0.745249, -0.0956861 )
 bone_name = "tripo__Spine_2"
 
 [node name="Silla_Americano" parent="Caballo_Ingles_01/RootNode/Armature/Skeleton/BoneAttachment" instance=ExtResource( 10 )]
@@ -98,7 +94,7 @@ caballo = "ingles"
 estado = "listas"
 
 [node name="BoneAttachment_Cabeza" type="BoneAttachment" parent="Caballo_Ingles_01/RootNode/Armature/Skeleton" index="2"]
-transform = Transform( -0.136099, -0.806578, 0.575247, 0.990528, -0.121461, 0.0640445, 0.0182135, 0.578514, 0.815469, -0.421842, 0.711362, 0.161752 )
+transform = Transform( 0.0124849, -0.814813, 0.579589, 0.99992, 0.0111422, -0.00587513, -0.00167067, 0.579616, 0.814888, -0.431224, 0.744712, 0.163008 )
 bone_name = "tripo__Head_1"
 
 [node name="Brida_Americano" parent="Caballo_Ingles_01/RootNode/Armature/Skeleton/BoneAttachment_Cabeza" instance=ExtResource( 9 )]
